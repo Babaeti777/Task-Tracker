@@ -1,810 +1,1085 @@
 <!DOCTYPE html>
- <html lang="en">
- <head>
-     <meta charset="UTF-8">
-     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-     <title>Eisenhower Matrix - AI Task Manager</title>
-     <script src="https://cdn.tailwindcss.com"></script>
-     <link rel="preconnect" href="https://fonts.googleapis.com">
-     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
--    <script src="https://accounts.google.com/gsi/client" async defer></script>
--    <script src="https://apis.google.com/js/api.js" async defer></script>
-     <style>
-         body { font-family: 'Inter', sans-serif; background-color: #f0f2f5; }
-         .quadrant-1-border { border-color: #ef4444 !important; }
-         .quadrant-2-border { border-color: #3b82f6 !important; }
-         .quadrant-3-border { border-color: #f97316 !important; }
-         .quadrant-4-border { border-color: #6b7280 !important; }
-         .quadrant-1-text { color: #ef4444 !important; }
-         .quadrant-2-text { color: #3b82f6 !important; }
-         .quadrant-3-text { color: #f97316 !important; }
-         .quadrant-4-text { color: #6b7280 !important; }
-         .quadrant-1-bg { background-color: #ef4444 !important; }
-         .quadrant-2-bg { background-color: #3b82f6 !important; }
-         .quadrant-3-bg { background-color: #f97316 !important; }
-         .quadrant-4-bg { background-color: #6b7280 !important; }
-         .task.overdue { background-color: #fef2f2; border-left-color: #ef4444; }
-         .task.running { box-shadow: 0 0 0 2px #3b82f6; background-color: #dbeafe; }
-         .drag-over { transform: scale(1.02); background-color: #eff6ff; }
-         .task.dragging { opacity: 0.5; }
-         .modal { transition: opacity 0.25s ease; }
-         .modal-content { transition: transform 0.25s ease; }
-         .task-title-input { width: 100%; padding: 2px; border-radius: 4px; border: 1px solid #cbd5e1; outline: none; font-weight: 600; }
-         .task-title-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.4); }
-         .spinner { border-top-color: #ffffff; animation: spin 1s linear infinite; }
-         @keyframes spin { to { transform: rotate(360deg); } }
- 
-@@ -41,167 +39,209 @@
-         }
-         #timer-fullscreen-display {
-             font-size: clamp(4rem, 25vw, 12rem);
-             font-variant-numeric: tabular-nums;
-             text-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
-         }
-         .pulse-animation {
-             animation: pulse 4s ease-in-out infinite;
-         }
-         @keyframes pulse {
-             0% { transform: scale(1); opacity: 0.7; }
-             50% { transform: scale(1.05); opacity: 1; }
-             100% { transform: scale(1); opacity: 0.7; }
-         }
-     </style>
- </head>
- <body class="bg-gradient-to-br from-gray-50 to-gray-200">
- 
-     <div id="configWarning" class="hidden px-4 py-3 text-sm font-medium text-center text-red-800 bg-red-100 border-b-2 border-red-200"></div>
-     
-     <div id="main-content">
-         <div class="min-h-screen p-4 mx-auto max-w-7xl sm:p-6 lg:p-8">
-             <header class="mb-8 text-center">
-                 <h1 class="text-4xl font-bold tracking-tight text-gray-800 sm:text-5xl">Eisenhower Matrix</h1>
-                 <p class="mt-2 text-lg text-gray-600">AI-Powered Task Management.</p>
--                <div id="authSection" class="flex items-center justify-center min-h-[40px] mt-6"></div>
-+                <p class="mt-4 text-sm text-gray-500">Manage your tasks, edit details inline, and keep everything in sync with Excel exports.</p>
-             </header>
-             <div class="grid grid-cols-1 gap-6 mb-8 lg:grid-cols-3">
-                 <div class="p-6 bg-white border border-gray-200 rounded-2xl shadow-lg lg:col-span-2">
-                     <h2 class="text-lg font-semibold text-gray-800">Add a New Task</h2>
-                      <form id="addTaskForm" class="mt-4" onsubmit="TaskManager.addTask(event)">
-                         <div class="mb-4">
-                             <label for="taskTitle" class="text-sm font-medium text-gray-600">Task Title</label>
-                             <input type="text" id="taskTitle" placeholder="e.g., Finish project proposal" class="w-full px-4 py-2 mt-1 text-gray-800 bg-gray-100 border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" required>
-                         </div>
-                         <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                             <div>
-                                 <label for="taskQuadrant" class="text-sm font-medium text-gray-600">Priority</label>
-                                 <select id="taskQuadrant" class="w-full px-4 py-2 mt-1 text-gray-800 bg-gray-100 border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
-                                     <option value="1">🔥 Urgent & Important</option>
-                                     <option value="2" selected>📅 Important</option>
-                                     <option value="3">⚡ Urgent</option>
-                                     <option value="4">🗑️ Eliminate</option>
-                                 </select>
-                             </div>
-                             <div>
-                                 <label for="taskTime" class="text-sm font-medium text-gray-600">Est. Minutes</label>
-                                 <input type="number" id="taskTime" value="25" min="5" class="w-full px-4 py-2 mt-1 text-gray-800 bg-gray-100 border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
-                             </div>
-                             <div>
-                                 <label for="taskDueDate" class="text-sm font-medium text-gray-600">Due Date</label>
-                                 <input type="date" id="taskDueDate" class="w-full px-4 py-2 mt-1 text-gray-800 bg-gray-100 border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
-                             </div>
-                         </div>
-                         <button type="submit" class="w-full px-6 py-3 mt-6 font-semibold text-white bg-blue-600 rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">Add Task</button>
-                     </form>
-                 </div>
-                 <div class="p-6 bg-white border border-gray-200 rounded-2xl shadow-lg">
-                      <h2 class="text-lg font-semibold text-gray-800">Options</h2>
-                      <div class="mt-4 space-y-4">
-                          <label class="flex items-center justify-between p-4 bg-gray-100 rounded-lg cursor-pointer">
-                             <span class="font-medium text-gray-700">Hide Completed Tasks</span>
-                             <div class="relative inline-flex items-center cursor-pointer">
-                                 <input type="checkbox" id="hideCompleted" class="sr-only peer" onchange="TaskManager.render()">
-                                 <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-4 peer-focus:ring-blue-300 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                             </div>
-                         </label>
-+                        <button onclick="ExcelService.exportTasks()" class="flex items-center justify-center w-full gap-2 px-4 py-2 font-semibold text-white transition bg-green-600 rounded-lg shadow hover:bg-green-700">
-+                            <span>⬇️ Export Tasks to Excel</span>
-+                        </button>
-+                        <button onclick="document.getElementById('importFileInput').click()" class="flex items-center justify-center w-full gap-2 px-4 py-2 font-semibold text-white transition bg-blue-600 rounded-lg shadow hover:bg-blue-700">
-+                            <span>⬆️ Import Tasks from Excel</span>
-+                        </button>
-+                        <input type="file" id="importFileInput" accept=".xlsx,.xls" class="hidden" onchange="ExcelService.handleFileUpload(event)">
-                      </div>
-                 </div>
-             </div>
-             <main class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:gap-8">
-                 <div class="quadrant quadrant-1 bg-white border-t-4 border-gray-200 rounded-2xl shadow-lg" data-quadrant="1" ondrop="TaskManager.drop(event)" ondragover="TaskManager.allowDrop(event)" ondragleave="TaskManager.dragLeave(event)">
-                     <div class="flex items-center justify-between p-4 border-b border-gray-200"><h3 class="text-lg font-bold quadrant-1-text">🔥 Urgent & Important (Do)</h3><div id="count-1" class="px-3 py-1 text-sm font-bold text-white rounded-full quadrant-1-bg">0</div></div><div id="tasks-1" class="p-4 space-y-3"></div>
-                 </div>
-                 <div class="quadrant quadrant-2 bg-white border-t-4 border-gray-200 rounded-2xl shadow-lg" data-quadrant="2" ondrop="TaskManager.drop(event)" ondragover="TaskManager.allowDrop(event)" ondragleave="TaskManager.dragLeave(event)">
-                     <div class="flex items-center justify-between p-4 border-b border-gray-200"><h3 class="text-lg font-bold quadrant-2-text">📅 Important (Schedule)</h3><div id="count-2" class="px-3 py-1 text-sm font-bold text-white rounded-full quadrant-2-bg">0</div></div><div id="tasks-2" class="p-4 space-y-3"></div>
-                 </div>
-                 <div class="quadrant quadrant-3 bg-white border-t-4 border-gray-200 rounded-2xl shadow-lg" data-quadrant="3" ondrop="TaskManager.drop(event)" ondragover="TaskManager.allowDrop(event)" ondragleave="TaskManager.dragLeave(event)">
-                     <div class="flex items-center justify-between p-4 border-b border-gray-200"><h3 class="text-lg font-bold quadrant-3-text">⚡ Urgent (Delegate)</h3><div id="count-3" class="px-3 py-1 text-sm font-bold text-white rounded-full quadrant-3-bg">0</div></div><div id="tasks-3" class="p-4 space-y-3"></div>
-                 </div>
-                 <div class="quadrant quadrant-4 bg-white border-t-4 border-gray-200 rounded-2xl shadow-lg" data-quadrant="4" ondrop="TaskManager.drop(event)" ondragover="TaskManager.allowDrop(event)" ondragleave="TaskManager.dragLeave(event)">
-                     <div class="flex items-center justify-between p-4 border-b border-gray-200"><h3 class="text-lg font-bold quadrant-4-text">🗑️ Neither (Eliminate)</h3><div id="count-4" class="px-3 py-1 text-sm font-bold text-white rounded-full quadrant-4-bg">0</div></div><div id="tasks-4" class="p-4 space-y-3"></div>
-                 </div>
-             </main>
-         </div>
-     </div>
- 
-     <!-- Timer Fullscreen Overlay -->
-     <div id="timer-fullscreen" class="fixed inset-0 z-50 flex-col items-center justify-center hidden text-white opacity-0">
-         <div class="text-center pulse-animation">
-             <h2 id="timer-fullscreen-task-title" class="mb-4 text-4xl font-semibold opacity-80"></h2>
-             <div id="timer-fullscreen-display" class="font-bold">25:00</div>
-         </div>
-         <div class="absolute flex gap-4 bottom-10">
-             <button id="timer-fullscreen-pause" onclick="Timer.pause()" class="px-6 py-3 font-semibold text-white bg-white bg-opacity-20 rounded-lg hover:bg-opacity-30">Pause</button>
-             <button id="timer-fullscreen-start" onclick="Timer.start()" class="hidden px-6 py-3 font-semibold text-white bg-white bg-opacity-20 rounded-lg hover:bg-opacity-30">Resume</button>
-             <button onclick="Timer.stop()" class="px-6 py-3 font-semibold text-white bg-red-500 rounded-lg hover:bg-red-600">Stop & Exit</button>
-         </div>
-     </div>
- 
- 
-     <div id="detailsModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 transition-opacity duration-300 bg-black bg-opacity-50 opacity-0 pointer-events-none modal">
-         <div class="w-full max-w-lg p-6 bg-white modal-content rounded-2xl shadow-2xl scale-95 transform-gpu transition-transform duration-300">
-             <div class="flex items-center justify-between pb-3 border-b border-gray-200">
-                 <h3 id="detailsTitle" class="text-2xl font-bold text-gray-800">Task Details</h3>
-                 <button onclick="UI.closeDetailsModal()" class="p-1 text-gray-400 rounded-full hover:bg-gray-200 hover:text-gray-600">&times;</button>
-             </div>
--            <div class="mt-4">
--                <div class="mb-4">
-+            <div class="mt-4 space-y-6">
-+                <div class="space-y-4">
-+                    <div>
-+                        <label for="detailTitleInput" class="text-sm font-medium text-gray-600">Task Title</label>
-+                        <input id="detailTitleInput" type="text" class="w-full px-3 py-2 mt-1 bg-gray-100 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" placeholder="Update the task title">
-+                    </div>
-+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-+                        <div>
-+                            <label for="detailQuadrantSelect" class="text-sm font-medium text-gray-600">Priority</label>
-+                            <select id="detailQuadrantSelect" class="w-full px-3 py-2 mt-1 bg-gray-100 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
-+                                <option value="1">🔥 Urgent & Important</option>
-+                                <option value="2">📅 Important</option>
-+                                <option value="3">⚡ Urgent</option>
-+                                <option value="4">🗑️ Eliminate</option>
-+                            </select>
-+                        </div>
-+                        <div>
-+                            <label for="detailTimeInput" class="text-sm font-medium text-gray-600">Est. Minutes</label>
-+                            <input id="detailTimeInput" type="number" min="5" class="w-full px-3 py-2 mt-1 bg-gray-100 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
-+                        </div>
-+                        <div>
-+                            <label for="detailDueDateInput" class="text-sm font-medium text-gray-600">Due Date</label>
-+                            <input id="detailDueDateInput" type="date" class="w-full px-3 py-2 mt-1 bg-gray-100 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
-+                        </div>
-+                    </div>
-+                    <label class="inline-flex items-center gap-2 text-sm font-medium text-gray-600">
-+                        <input id="detailCompletedCheckbox" type="checkbox" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
-+                        Mark as completed
-+                    </label>
-+                    <div class="flex justify-end">
-+                        <button onclick="TaskManager.saveDetails()" class="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-md shadow hover:bg-blue-700">
-+                            <span>💾 Save Changes</span>
-+                        </button>
-+                    </div>
-+                </div>
-+                <div class="pt-4 border-t border-gray-200">
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Eisenhower Matrix - AI Task Manager</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f0f2f5; }
+        .quadrant-1-border { border-color: #ef4444 !important; }
+        .quadrant-2-border { border-color: #3b82f6 !important; }
+        .quadrant-3-border { border-color: #f97316 !important; }
+        .quadrant-4-border { border-color: #6b7280 !important; }
+        .quadrant-1-text { color: #ef4444 !important; }
+        .quadrant-2-text { color: #3b82f6 !important; }
+        .quadrant-3-text { color: #f97316 !important; }
+        .quadrant-4-text { color: #6b7280 !important; }
+        .quadrant-1-bg { background-color: #ef4444 !important; }
+        .quadrant-2-bg { background-color: #3b82f6 !important; }
+        .quadrant-3-bg { background-color: #f97316 !important; }
+        .quadrant-4-bg { background-color: #6b7280 !important; }
+        .task.overdue { background-color: #fef2f2; border-left-color: #ef4444; }
+        .task.running { box-shadow: 0 0 0 2px #3b82f6; background-color: #dbeafe; }
+        .drag-over { transform: scale(1.02); background-color: #eff6ff; }
+        .task.dragging { opacity: 0.5; }
+        .modal { transition: opacity 0.25s ease; }
+        .modal-content { transition: transform 0.25s ease; }
+        .task-title-input { width: 100%; padding: 2px; border-radius: 4px; border: 1px solid #cbd5e1; outline: none; font-weight: 600; }
+        .task-title-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.4); }
+        .spinner { border-top-color: #ffffff; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Task Actions Visibility */
+        .task .task-actions { visibility: hidden; opacity: 0; transition: opacity 0.2s ease-in-out; }
+        .task:hover .task-actions { visibility: visible; opacity: 1; }
+        .task-btn { font-size: 1.1rem; line-height: 1; }
+        .task.completed { background-color: #f8f9fa; opacity: 0.6; }
+        .task.completed .task-title-text { text-decoration: line-through; }
+        
+        /* Timer Fullscreen */
+        #timer-fullscreen {
+            transition: opacity 0.5s ease-in-out;
+            background: linear-gradient(145deg, #444, #222);
+        }
+        #timer-fullscreen-display {
+            font-size: clamp(4rem, 25vw, 12rem);
+            font-variant-numeric: tabular-nums;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+        }
+        .pulse-animation { animation: pulse 4s ease-in-out infinite; }
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 0.7; }
+            50% { transform: scale(1.05); opacity: 1; }
+            100% { transform: scale(1); opacity: 0.7; }
+        }
+
+        /* Toast Notification */
+        #toast-container {
+            position: fixed;
+            bottom: 1.5rem;
+            right: 1.5rem;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        .toast {
+            display: flex;
+            align-items: center;
+            width: 320px;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            opacity: 0;
+            transform: translateX(100%);
+            animation: slideIn 0.3s ease-out forwards, fadeOut 0.3s ease-in 4.7s forwards;
+        }
+        .toast-success { background-color: #ecfdf5; border: 1px solid #bbf7d0; color: #065f46; }
+        .toast-error { background-color: #fef2f2; border: 1px solid #fecaca; color: #991b1b; }
+        .toast-info { background-color: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; }
+        .toast-icon { margin-right: 0.75rem; font-size: 1.25rem; }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(100%); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes fadeOut { from { opacity: 1; transform: translateX(0); } to { opacity: 0; transform: translateX(100%); } }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-gray-50 to-gray-200">
+
+    <!-- Config/Error Bar -->
+    <div id="configWarning" class="hidden fixed top-0 left-0 right-0 z-[101] px-4 py-3 text-sm font-medium text-center text-red-800 bg-red-100 border-b-2 border-red-200"></div>
+    
+    <!-- Auth/Loading Overlay -->
+    <div id="auth-overlay" class="fixed inset-0 z-[99] flex flex-col items-center justify-center gap-4 bg-gray-100/90 backdrop-blur-sm">
+        <div class="w-12 h-12 border-4 border-blue-500 rounded-full border-t-transparent animate-spin"></div>
+        <p class="text-lg font-semibold text-gray-700">Connecting to database...</p>
+    </div>
+
+    <!-- New Header Bar -->
+    <header class="fixed top-0 left-0 right-0 z-40 flex items-center justify-between h-16 px-4 bg-white shadow-md sm:px-6 lg:px-8">
+        <h1 class="text-2xl font-bold tracking-tight text-gray-800">Eisenhower</h1>
+        <div class="flex items-center gap-4">
+            <!-- FIXED: Added data-action -->
+            <button id="openSettingsBtn" data-action="open-settings" class="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-gray-700 transition bg-gray-200 rounded-lg hover:bg-gray-300">
+                <span>⚙️</span>
+                <span class="hidden sm:inline">AI Settings</span>
+            </button>
+            <div id="authSection" class="min-h-[30px]">
+                <span class="px-3 py-1 text-xs font-medium text-gray-600 bg-gray-200 rounded-full">Connecting...</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main id="main-content" class="pt-24 pb-24"> <!-- Added padding top for fixed header -->
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:gap-8">
+                <div class="quadrant quadrant-1 bg-white border-t-4 border-gray-200 rounded-2xl shadow-lg" data-quadrant="1">
+                    <div class="flex items-center justify-between p-4 border-b border-gray-200"><h3 class="text-lg font-bold quadrant-1-text">🔥 Urgent & Important (Do)</h3><div id="count-1" class="px-3 py-1 text-sm font-bold text-white rounded-full quadrant-1-bg">0</div></div><div id="tasks-1" class="min-h-[200px] p-4 space-y-3"></div>
+                </div>
+                <div class="quadrant quadrant-2 bg-white border-t-4 border-gray-200 rounded-2xl shadow-lg" data-quadrant="2">
+                    <div class="flex items-center justify-between p-4 border-b border-gray-200"><h3 class="text-lg font-bold quadrant-2-text">📅 Important (Schedule)</h3><div id="count-2" class="px-3 py-1 text-sm font-bold text-white rounded-full quadrant-2-bg">0</div></div><div id="tasks-2" class="min-h-[200px] p-4 space-y-3"></div>
+                </div>
+                <div class="quadrant quadrant-3 bg-white border-t-4 border-gray-200 rounded-2xl shadow-lg" data-quadrant="3">
+                    <div class="flex items-center justify-between p-4 border-b border-gray-200"><h3 class="text-lg font-bold quadrant-3-text">⚡ Urgent (Delegate)</h3><div id="count-3" class="px-3 py-1 text-sm font-bold text-white rounded-full quadrant-3-bg">0</div></div><div id="tasks-3" class="min-h-[200px] p-4 space-y-3"></div>
+                </div>
+                <div class="quadrant quadrant-4 bg-white border-t-4 border-gray-200 rounded-2xl shadow-lg" data-quadrant="4">
+                    <div class="flex items-center justify-between p-4 border-b border-gray-200"><h3 class="text-lg font-bold quadrant-4-text">🗑️ Neither (Eliminate)</h3><div id="count-4" class="px-3 py-1 text-sm font-bold text-white rounded-full quadrant-4-bg">0</div></div><div id="tasks-4" class="min-h-[200px] p-4 space-y-3"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <!-- New Floating Action Button (FAB) -->
+    <!-- FIXED: Added data-action -->
+    <button id="openAddModalBtn" data-action="open-add-modal" title="Add New Task" class="fixed z-40 flex items-center justify-center w-16 h-16 text-3xl font-light text-white bg-blue-600 rounded-full shadow-lg bottom-6 right-6 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+        +
+    </button>
+
+    <!-- Timer Fullscreen Overlay -->
+    <div id="timer-fullscreen" class="fixed inset-0 z-50 flex-col items-center justify-center hidden text-white opacity-0">
+        <div class="text-center pulse-animation">
+            <h2 id="timer-fullscreen-task-title" class="mb-4 text-4xl font-semibold opacity-80"></h2>
+            <div id="timer-fullscreen-display" class="font-bold">25:00</div>
+        </div>
+        <div class="absolute flex gap-4 bottom-10">
+            <button id="timer-fullscreen-pause" class="px-6 py-3 font-semibold text-white bg-white bg-opacity-20 rounded-lg hover:bg-opacity-30">Pause</button>
+            <button id="timer-fullscreen-start" class="hidden px-6 py-3 font-semibold text-white bg-white bg-opacity-20 rounded-lg hover:bg-opacity-30">Resume</button>
+            <button id="timer-fullscreen-stop" class="px-6 py-3 font-semibold text-white bg-red-500 rounded-lg hover:bg-red-600">Stop & Exit</button>
+        </div>
+    </div>
+    
+    <!-- New Add Task Modal -->
+    <div id="addTaskModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 transition-opacity duration-300 bg-black bg-opacity-50 opacity-0 pointer-events-none modal">
+        <div class="w-full max-w-lg p-6 bg-white modal-content rounded-2xl shadow-2xl scale-95 transform-gpu transition-transform duration-300">
+            <div class="flex items-center justify-between pb-3 border-b border-gray-200">
+                <h3 class="text-2xl font-bold text-gray-800">Add a New Task</h3>
+                <button data-action="close-modal" class="p-1 text-gray-400 rounded-full hover:bg-gray-200 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <form id="addTaskForm" class="mt-4">
+                <div class="mb-4">
+                    <label for="taskTitle" class="text-sm font-medium text-gray-600">Task Title</label>
+                    <input type="text" id="taskTitle" placeholder="e.g., Finish project proposal" class="w-full px-4 py-2 mt-1 text-gray-800 bg-gray-100 border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" required>
+                </div>
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                    <div>
+                        <label for="taskQuadrant" class="text-sm font-medium text-gray-600">Priority</label>
+                        <select id="taskQuadrant" class="w-full px-4 py-2 mt-1 text-gray-800 bg-gray-100 border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                            <option value="1">🔥 Urgent & Important</option>
+                            <option value="2" selected>📅 Important</option>
+                            <option value="3">⚡ Urgent</option>
+                            <option value="4">🗑️ Eliminate</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="taskTime" class="text-sm font-medium text-gray-600">Est. Minutes</label>
+                        <input type="number" id="taskTime" value="25" min="5" class="w-full px-4 py-2 mt-1 text-gray-800 bg-gray-100 border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label for="taskDueDate" class="text-sm font-medium text-gray-600">Due Date</label>
+                        <input type="date" id="taskDueDate" class="w-full px-4 py-2 mt-1 text-gray-800 bg-gray-100 border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                </div>
+                <div class="flex justify-end gap-3 mt-6">
+                    <button type="button" data-action="close-modal" class="px-6 py-2 font-semibold text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300">Cancel</button>
+                    <button type="submit" class="w-full sm:w-auto px-6 py-3 font-semibold text-white bg-blue-600 rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">Add Task</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Details Modal -->
+    <div id="detailsModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 transition-opacity duration-300 bg-black bg-opacity-50 opacity-0 pointer-events-none modal">
+        <div class="w-full max-w-lg p-6 bg-white modal-content rounded-2xl shadow-2xl scale-95 transform-gpu transition-transform duration-300">
+            <div class="flex items-center justify-between pb-3 border-b border-gray-200">
+                <h3 id="detailsTitle" class="text-2xl font-bold text-gray-800">Task Details</h3>
+                <button data-action="close-modal" class="p-1 text-gray-400 rounded-full hover:bg-gray-200 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div class="mt-4 space-y-6 max-h-[70vh] overflow-y-auto pr-2">
+                <div class="space-y-4">
+                    <div>
+                        <label for="detailTitleInput" class="text-sm font-medium text-gray-600">Task Title</label>
+                        <input id="detailTitleInput" type="text" class="w-full px-3 py-2 mt-1 bg-gray-100 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" placeholder="Update the task title">
+                    </div>
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                        <div>
+                            <label for="detailQuadrantSelect" class="text-sm font-medium text-gray-600">Priority</label>
+                            <select id="detailQuadrantSelect" class="w-full px-3 py-2 mt-1 bg-gray-100 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                                <option value="1">🔥 Urgent & Important</option>
+                                <option value="2">📅 Important</option>
+                                <option value="3">⚡ Urgent</option>
+                                <option value="4">🗑️ Eliminate</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="detailTimeInput" class="text-sm font-medium text-gray-600">Est. Minutes</label>
+                            <input id="detailTimeInput" type="number" min="5" class="w-full px-3 py-2 mt-1 bg-gray-100 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label for="detailDueDateInput" class="text-sm font-medium text-gray-600">Due Date</label>
+                            <input id="detailDueDateInput" type="date" class="w-full px-3 py-2 mt-1 bg-gray-100 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                    </div>
+                    <label class="inline-flex items-center gap-2 text-sm font-medium text-gray-600">
+                        <input id="detailCompletedCheckbox" type="checkbox" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
+                        Mark as completed
+                    </label>
+                    <div class="flex justify-end">
+                        <button data-action="save-details" class="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-md shadow hover:bg-blue-700">
+                            <span>💾 Save Changes</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="pt-4 border-t border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <h4 class="font-semibold text-gray-700">Sub-tasks</h4>
+                        <button id="generateSubtasksBtn" data-action="gen-subtasks" class="flex items-center gap-1 px-2 py-1 text-xs font-semibold text-white bg-purple-500 rounded-md hover:bg-purple-600">
+                            <span class="btn-text">✨ Smart Sub-tasks</span>
+                            <div class="hidden w-4 h-4 border-2 border-t-transparent border-white rounded-full spinner"></div>
+                        </button>
+                    </div>
+                    <div id="subtasksContainer" class="mt-2 space-y-2"></div>
+                    <div class="flex gap-2 mt-2">
+                        <input type="text" id="newSubtaskInput" placeholder="Add a new sub-task..." class="flex-grow px-3 py-1 bg-gray-100 border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                        <button data-action="add-subtask" class="px-3 py-1 font-semibold text-white bg-blue-500 rounded-md hover:bg-blue-600">Add</button>
+                    </div>
+                </div>
+                <div class="pt-4 border-t border-gray-200">
                      <div class="flex items-center justify-between">
-                         <h4 class="font-semibold text-gray-700">Sub-tasks</h4>
-                         <button id="generateSubtasksBtn" onclick="GeminiService.generateSubtasks()" class="flex items-center gap-1 px-2 py-1 text-xs font-semibold text-white bg-purple-500 rounded-md hover:bg-purple-600">
-                             <span class="btn-text">✨ Smart Sub-tasks</span>
+                        <h4 class="font-semibold text-gray-700">Notes</h4>
+                        <button id="generateNotesBtn" data-action="gen-notes" class="flex items-center gap-1 px-2 py-1 text-xs font-semibold text-white bg-purple-500 rounded-md hover:bg-purple-600">
+                             <span class="btn-text">✨ Generate Notes</span>
                              <div class="hidden w-4 h-4 border-2 border-t-transparent border-white rounded-full spinner"></div>
-                         </button>
-                     </div>
-                     <div id="subtasksContainer" class="mt-2 space-y-2"></div>
-                     <div class="flex gap-2 mt-2">
-                         <input type="text" id="newSubtaskInput" placeholder="Add a new sub-task..." class="flex-grow px-3 py-1 bg-gray-100 border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
-                         <button onclick="TaskManager.addSubtask()" class="px-3 py-1 font-semibold text-white bg-blue-500 rounded-md hover:bg-blue-600">Add</button>
-                     </div>
-                 </div>
--                <div>
-+                <div class="pt-4 border-t border-gray-200">
-                      <div class="flex items-center justify-between">
-                         <h4 class="font-semibold text-gray-700">Notes</h4>
-                         <button id="generateNotesBtn" onclick="GeminiService.generateNotes()" class="flex items-center gap-1 px-2 py-1 text-xs font-semibold text-white bg-purple-500 rounded-md hover:bg-purple-600">
-                              <span class="btn-text">✨ Generate Notes</span>
-                              <div class="hidden w-4 h-4 border-2 border-t-transparent border-white rounded-full spinner"></div>
-                         </button>
-                     </div>
-                     <textarea id="taskNotes" rows="4" class="w-full p-2 mt-2 bg-gray-100 border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" placeholder="Add any notes here..."></textarea>
-                 </div>
+                        </button>
+                    </div>
+                    <textarea id="taskNotes" rows="4" class="w-full p-2 mt-2 bg-gray-100 border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" placeholder="Add any notes here..."></textarea>
+                </div>
+            </div>
+             <div class="flex justify-end mt-6">
+                <button data-action="close-modal" class="px-6 py-2 font-semibold text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300">Close</button>
              </div>
-              <div class="flex justify-end mt-6">
--                <button onclick="UI.closeDetailsModal()" class="px-6 py-2 font-semibold text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300">Done</button>
-+                <button onclick="UI.closeDetailsModal()" class="px-6 py-2 font-semibold text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300">Close</button>
+        </div>
+    </div>
+    
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 transition-opacity duration-300 bg-black bg-opacity-50 opacity-0 pointer-events-none modal">
+        <div class="w-full max-w-sm p-6 bg-white modal-content rounded-2xl shadow-2xl scale-95 transform-gpu transition-transform duration-300">
+            <h3 class="text-lg font-semibold text-gray-900">Delete Task</h3>
+            <p class="mt-2 text-sm text-gray-600">Are you sure you want to delete this task? This action cannot be undone.</p>
+            <div class="flex justify-end gap-3 mt-6">
+                <button data-action="close-modal" class="px-4 py-2 font-semibold text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300">
+                    Cancel
+                </button>
+                <button id="confirmDeleteBtn" data-action="confirm-delete" class="px-4 py-2 font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700">
+                    Delete
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 transition-opacity duration-300 bg-black bg-opacity-50 opacity-0 pointer-events-none modal">
+        <div class="w-full max-w-md p-6 bg-white modal-content rounded-2xl shadow-2xl scale-95 transform-gpu transition-transform duration-300">
+            <div class="flex items-center justify-between pb-3 border-b border-gray-200">
+                <h3 class="text-2xl font-bold text-gray-800">AI Settings</h3>
+                <button data-action="close-modal" class="p-1 text-gray-400 rounded-full hover:bg-gray-200 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div class="mt-4 space-y-4">
+                <div>
+                    <label for="geminiApiKeyInput" class="text-sm font-medium text-gray-600">Gemini API Key</label>
+                    <input type="password" id="geminiApiKeyInput" placeholder="Enter your Google AI Studio API Key" class="w-full px-4 py-2 mt-1 text-gray-800 bg-gray-100 border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                    <p class="mt-1 text-xs text-gray-500">Your key is saved securely in your browser's local storage.</p>
+                </div>
+            </div>
+             <div class="flex justify-end gap-3 mt-6">
+                <button data-action="close-modal" class="px-6 py-2 font-semibold text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300">Cancel</button>
+                <button data-action="save-api-key" class="px-6 py-2 font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700">Save</button>
              </div>
-         </div>
-     </div>
-     
-+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-+
-     <script>
-     // --- CONFIGURATION --- //
--    const GOOGLE_CLIENT_ID = "434910578368-6ura496r68hb9onic2osm71c9es9ap8p.apps.googleusercontent.com";
-     let GEMINI_API_KEY = "";
-     
-     // --- GEMINI AI SERVICE --- //
-     const GeminiService = {
-         setLoadingState(buttonId, isLoading) {
-             const button = document.getElementById(buttonId);
-             if (button) {
-                 const text = button.querySelector('.btn-text');
-                 const spinner = button.querySelector('.spinner');
-                 if (isLoading) {
-                     text.classList.add('hidden');
-                     spinner.classList.remove('hidden');
-                     button.disabled = true;
-                 } else {
-                     text.classList.remove('hidden');
-                     spinner.classList.add('hidden');
-                     button.disabled = false;
-                 }
-             }
-         },
-         async call(prompt) {
-             if (!GEMINI_API_KEY) {
-                 const key = prompt("Please enter your Gemini API Key. You can get one from Google AI Studio.");
-                 if (key) {
-                     GEMINI_API_KEY = key;
-@@ -244,172 +284,141 @@
-             if (result) {
-                 result.split(',').forEach(subtaskText => {
-                     if (subtaskText.trim()) {
-                         TaskManager.addSubtask(subtaskText.trim(), true);
-                     }
-                 });
-             }
-             this.setLoadingState('generateSubtasksBtn', false);
-         },
-         async generateNotes() {
-             this.setLoadingState('generateNotesBtn', true);
-             const task = TaskManager.tasks.find(t => t.id === UI.currentDetailTaskId);
-             if (!task) { this.setLoadingState('generateNotesBtn', false); return; }
- 
-             const promptText = `Generate helpful notes for the task: "${task.title}". The notes should be a short paragraph, offering a brief plan or key considerations.`;
-             const result = await this.call(promptText);
-             if (result) {
-                 const notesArea = document.getElementById('taskNotes');
-                 notesArea.value = result;
-                 TaskManager.updateNotes(result);
-             }
-             this.setLoadingState('generateNotesBtn', false);
-         }
-     };
- 
--    // --- GOOGLE AUTH & API HANDLER --- //
--    const GoogleService = {
--        tokenClient: null, isGapiLoaded: false, isLoggedIn: false, userProfile: null,
--        init() {
--            const googleConfigWarning = '<strong>Configuration Required:</strong> Please update the <code>GOOGLE_CLIENT_ID</code> in the script to enable Google Sign-In.';
--            if (GOOGLE_CLIENT_ID === 'YOUR_CLIENT_ID.apps.googleusercontent.com') {
--                document.getElementById('configWarning').innerHTML = googleConfigWarning;
--                document.getElementById('configWarning').classList.remove('hidden');
--                document.querySelector('#authSection').innerHTML = `<button class="inline-flex items-center justify-center gap-2 px-4 py-2 font-semibold text-white bg-gray-400 rounded-lg shadow-md cursor-not-allowed" disabled>Setup Required</button>`;
-+    // --- EXCEL IMPORT/EXPORT SERVICE --- //
-+    const ExcelService = {
-+        exportTasks() {
-+            if (!TaskManager.tasks.length) {
-+                UI.showNotification('No tasks available to export yet.', 'error');
-                 return;
-             }
-+            const worksheetData = TaskManager.tasks.map(task => ({
-+                ID: task.id,
-+                Title: task.title,
-+                Quadrant: task.quadrant,
-+                TimeBoxMinutes: task.timeBox,
-+                DueDate: task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : '',
-+                Completed: task.completed,
-+                Notes: task.notes || '',
-+                Subtasks: JSON.stringify(task.subtasks || [])
-+            }));
-+            const worksheet = XLSX.utils.json_to_sheet(worksheetData);
-+            const workbook = XLSX.utils.book_new();
-+            XLSX.utils.book_append_sheet(workbook, worksheet, 'Tasks');
-+            XLSX.writeFile(workbook, 'tasks.xlsx');
-+            UI.showNotification('Tasks exported to Excel.', 'success');
-+        },
-+        handleFileUpload(event) {
-+            const file = event.target.files[0];
-+            if (!file) { return; }
-+            this.importTasks(file);
-+            event.target.value = '';
-+        },
-+        importTasks(file) {
-+            const reader = new FileReader();
-+            reader.onload = (e) => {
-+                try {
-+                    const data = new Uint8Array(e.target.result);
-+                    const workbook = XLSX.read(data, { type: 'array' });
-+                    const firstSheetName = workbook.SheetNames[0];
-+                    if (!firstSheetName) {
-+                        UI.showNotification('The Excel file does not contain any sheets.', 'error');
-+                        return;
-+                    }
-+                    const worksheet = workbook.Sheets[firstSheetName];
-+                    const rows = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
-+                    if (!rows.length) {
-+                        UI.showNotification('No task data found in the Excel file.', 'error');
-+                        return;
-+                    }
-+                    const importedTasks = rows.map((row, index) => {
-+                        const parsedSubtasks = (() => {
-+                            if (!row.Subtasks) { return []; }
-+                            try {
-+                                const value = typeof row.Subtasks === 'string' ? row.Subtasks : JSON.stringify(row.Subtasks);
-+                                const json = JSON.parse(value);
-+                                if (Array.isArray(json)) {
-+                                    return json.map((subtask, idx) => ({
-+                                        id: typeof subtask.id === 'number' ? subtask.id : idx + 1,
-+                                        text: subtask.text || String(subtask),
-+                                        completed: Boolean(subtask.completed)
-+                                    }));
-+                                }
-+                            } catch (error) {
-+                                return String(row.Subtasks).split('|').map((text, idx) => ({ id: idx + 1, text: text.trim(), completed: false }));
-+                            }
-+                            return [];
-+                        })();
- 
--            google.accounts.id.initialize({
--                client_id: GOOGLE_CLIENT_ID,
--                callback: this.handleCredentialResponse.bind(this),
--                auto_select: true
--            });
--            google.accounts.id.prompt((notification) => {
--                if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
--                    this.renderSignInButton();
--                }
--            });
--            gapi.load('client', this.initGapiClient.bind(this));
--        },
--        async initGapiClient() {
--            await gapi.client.init({ discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest", "https://www.googleapis.com/discovery/v1/apis/tasks/v1/rest"] });
--            this.isGapiLoaded = true;
--            if (this.isLoggedIn) {
--                this.syncWithGoogleTasks();
--            }
--        },
--        handleCredentialResponse(response) {
--            this.userProfile = this.decodeJwt(response.credential);
--            this.isLoggedIn = true;
--            this.tokenClient = google.accounts.oauth2.initTokenClient({
--                client_id: GOOGLE_CLIENT_ID,
--                scope: 'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/tasks',
--                callback: '',
--            });
--            this.updateUIAfterLogin();
--            TaskManager.render();
--            this.syncWithGoogleTasks();
--            setInterval(() => this.syncWithGoogleTasks(), 300000);
--        },
--        _makeApiCall(callback) {
--            if (!this.isLoggedIn || !this.tokenClient) { UI.showNotification("Please sign in to use Google features.", "error"); return; }
--            if (!this.isGapiLoaded) { UI.showNotification("Google APIs are still loading. Please try again.", "error"); return; }
--            this.tokenClient.callback = (tokenResponse) => {
--                if (tokenResponse && tokenResponse.access_token) {
--                    gapi.client.setToken(tokenResponse);
--                    callback();
--                } else {
--                    console.error("Authorization failed.", tokenResponse);
--                    UI.showNotification("Google authorization failed. Please grant permissions.", "error");
-+                        const dueDateValue = row.DueDate ? new Date(row.DueDate) : null;
-+                        const isValidDate = dueDateValue && !isNaN(dueDateValue.getTime());
-+
-+                        return {
-+                            id: Number(row.ID) || index + 1,
-+                            title: row.Title ? String(row.Title).trim() : `Imported Task ${index + 1}`,
-+                            quadrant: Number(row.Quadrant) >= 1 && Number(row.Quadrant) <= 4 ? Number(row.Quadrant) : 2,
-+                            timeBox: Number(row.TimeBoxMinutes) > 0 ? Number(row.TimeBoxMinutes) : 25,
-+                            dueDate: isValidDate ? new Date(dueDateValue.toISOString().split('T')[0] + 'T00:00:00').toISOString() : null,
-+                            completed: String(row.Completed).toLowerCase() === 'true',
-+                            createdAt: new Date().toISOString(),
-+                            notes: row.Notes ? String(row.Notes) : '',
-+                            subtasks: parsedSubtasks
-+                        };
-+                    });
-+
-+                    TaskManager.replaceTasks(importedTasks);
-+                    UI.showNotification('Tasks imported from Excel.', 'success');
-+                } catch (error) {
-+                    console.error('Error importing tasks from Excel:', error);
-+                    UI.showNotification('Failed to import tasks. Please verify the file format.', 'error');
-                 }
-             };
--            this.tokenClient.requestAccessToken({ prompt: 'consent' });
--        },
--        async syncWithGoogleTasks() {
--             if (!this.isLoggedIn) return;
--            this._makeApiCall(async () => {
--                try {
--                    const response = await gapi.client.tasks.tasks.list({ tasklist: '@default', showCompleted: true, showHidden: false });
--                    TaskManager.syncTasks(response.result.items || []);
--                } catch (err) { console.error("Error syncing with Google Tasks:", err); }
--            });
--        },
--        addToCalendar(task, evt = null) {
--            if (evt) evt.stopPropagation();
--             this._makeApiCall(async () => {
--                const event = {
--                    'summary': task.title,
--                    'description': `Quadrant: ${task.quadrant}`,
--                    'start': { 'dateTime': task.dueDate || new Date().toISOString(), 'timeZone': Intl.DateTimeFormat().resolvedOptions().timeZone },
--                    'end': { 'dateTime': task.dueDate || new Date(new Date().getTime() + task.timeBox * 60000).toISOString(), 'timeZone': Intl.DateTimeFormat().resolvedOptions().timeZone },
--                };
--                try {
--                    await gapi.client.calendar.events.insert({ 'calendarId': 'primary', 'resource': event });
--                    UI.showNotification("Task added to Google Calendar!", "success");
--                } catch (err) { console.error("Error adding to Calendar:", err); UI.showNotification("Could not add to Google Calendar.", "error");}
--            });
--        },
--        addToTasks(task, evt = null) {
--            if (evt) evt.stopPropagation();
--             this._makeApiCall(async () => {
--                try {
--                    const res = await gapi.client.tasks.tasks.insert({
--                        tasklist: '@default',
--                        resource: { title: task.title, notes: `Quadrant: ${task.quadrant}\n\nNotes:\n${task.notes}`, due: task.dueDate }
--                    });
--                    task.googleTaskId = res.result.id;
--                    TaskManager.saveAndRender();
--                    UI.showNotification("Task added to Google Tasks!", "success");
--                } catch (err) { console.error("Error adding to Tasks:", err); UI.showNotification("Could not add to Google Tasks.", "error");}
--            });
--        },
--        updateTask(task) {
--             if (!task.googleTaskId) return;
--            this._makeApiCall(async () => {
--                try {
--                    await gapi.client.tasks.tasks.patch({
--                        tasklist: '@default',
--                        task: task.googleTaskId,
--                        resource: { id: task.googleTaskId, status: task.completed ? 'completed' : 'needsAction' }
--                    });
--                } catch (err) { console.error("Error updating Google Task:", err); }
--            });
--        },
--        signIn() { if (google.accounts.id) { google.accounts.id.prompt(); } },
--        signOut() {
--            if (gapi.client.getToken()) { google.accounts.oauth2.revoke(gapi.client.getToken().access_token, () => {}); gapi.client.setToken(null); }
--            google.accounts.id.disableAutoSelect();
--            this.isLoggedIn = false; this.userProfile = null; this.tokenClient = null;
--            this.renderSignInButton(); TaskManager.render(); UI.showNotification("You have been signed out.");
--        },
--        renderSignInButton() {
--            document.getElementById('authSection').innerHTML = `<button class="inline-flex items-center justify-center gap-2 px-4 py-2 font-semibold text-white bg-blue-600 rounded-lg shadow-md hover:bg-blue-700" onclick="GoogleService.signIn()"><svg class="w-5 h-5" viewBox="0 0 24 24"><path fill="currentColor" d="M21.35,11.1H12.18V13.83H18.69C18.36,17.64 15.19,19.27 12.19,19.27C8.36,19.27 5,16.25 5,12C5,7.9 8.2,4.73 12.19,4.73C15.29,4.73 17.1,6.7 17.1,6.7L19,4.72C19,4.72 16.56,2 12.19,2C6.42,2 2.03,6.8 2.03,12C2.03,17.05 6.16,22 12.19,22C17.6,22 21.54,18.33 21.54,12.25C21.54,11.66 21.48,11.38 21.35,11.1Z"></path></svg> Sign in with Google</button>`;
--        },
--        updateUIAfterLogin() {
--             document.getElementById('authSection').innerHTML = `<div class="flex items-center gap-3"><img src="${this.userProfile.picture}" alt="User" class="w-10 h-10 border-2 border-white rounded-full shadow-md"><span class="font-semibold text-gray-800">${this.userProfile.name}</span><button class="px-3 py-1 text-sm font-medium text-gray-700 bg-white rounded-md hover:bg-gray-200" onclick="GoogleService.signOut()">Sign Out</button></div>`;
--        },
--        decodeJwt(token) { try { return JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))); } catch (e) { console.error('Error decoding JWT', e); return null; } }
-+            reader.onerror = () => UI.showNotification('Unable to read the selected file.', 'error');
-+            reader.readAsArrayBuffer(file);
-+        }
-     };
-     
-     // --- TIMER --- //
-     const Timer = {
-         currentTask: null, duration: 0, remaining: 0, interval: null, isRunning: false,
-         startFromTask(taskId, evt = null) {
-             if (evt) evt.stopPropagation();
-             const task = TaskManager.tasks.find(t => t.id === taskId);
-             if (!task) return;
-             
-             if (this.currentTask && this.currentTask.id === taskId) {
-                 // If clicking the same task, toggle play/pause
-                 this.isRunning ? this.pause() : this.start();
-             } else {
-                  // If a different timer is running, stop it first
-                 if (this.isRunning) {
-                     this.stop(true); // stop without rendering
-                 }
-                 // Start a new timer
-                 this.currentTask = task;
-                 this.duration = task.timeBox * 60;
-                 this.remaining = task.remainingTime || this.duration;
-                 this.showFullscreen();
-                 this.start();
-             }
-@@ -458,188 +467,241 @@
-              const timerScreen = document.getElementById('timer-fullscreen');
-              timerScreen.classList.add('opacity-0');
-              setTimeout(() => timerScreen.classList.add('hidden'), 500);
-              document.getElementById('main-content').classList.remove('hidden');
-         },
-         updateFullscreenDisplay() {
-             const formatTime = (seconds) => {
-                 if (seconds < 0) seconds = 0;
-                 const m = Math.floor(seconds / 60); const s = seconds % 60;
-                 return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-             };
-             document.getElementById('timer-fullscreen-display').textContent = formatTime(this.remaining);
-         }
-     };
-     
-     // --- UI MANAGER --- //
-     const UI = {
-         currentDetailTaskId: null,
-         openDetailsModal(taskId, evt = null) {
-             if (evt) evt.stopPropagation();
-             this.currentDetailTaskId = taskId;
-             const task = TaskManager.tasks.find(t => t.id === taskId);
-             if (!task) return;
- 
-             document.getElementById('detailsTitle').textContent = task.title;
--            document.getElementById('taskNotes').value = task.notes || '';
-+
-+            const titleInput = document.getElementById('detailTitleInput');
-+            const quadrantSelect = document.getElementById('detailQuadrantSelect');
-+            const timeInput = document.getElementById('detailTimeInput');
-+            const dueDateInput = document.getElementById('detailDueDateInput');
-+            const completedCheckbox = document.getElementById('detailCompletedCheckbox');
-+            const notesArea = document.getElementById('taskNotes');
-+
-+            if (titleInput) { titleInput.value = task.title; }
-+            if (quadrantSelect) { quadrantSelect.value = task.quadrant; }
-+            if (timeInput) { timeInput.value = task.timeBox; }
-+            if (dueDateInput) {
-+                dueDateInput.value = task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : '';
-+            }
-+            if (completedCheckbox) { completedCheckbox.checked = Boolean(task.completed); }
-+            if (notesArea) { notesArea.value = task.notes || ''; }
-             
-             const subtasksContainer = document.getElementById('subtasksContainer');
-             subtasksContainer.innerHTML = (task.subtasks || []).map(st => `
-                 <div class="flex items-center gap-2 p-2 bg-gray-100 rounded-md">
-                     <input type="checkbox" ${st.completed ? 'checked' : ''} onchange="TaskManager.toggleSubtask(${st.id})" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
-                     <span class="flex-grow ${st.completed ? 'line-through text-gray-500' : 'text-gray-800'}">${st.text}</span>
-                     <button onclick="TaskManager.deleteSubtask(${st.id})" class="text-xs text-red-500 hover:text-red-700">Delete</button>
-                 </div>
-             `).join('') || '<p class="text-sm text-center text-gray-500">No sub-tasks yet.</p>';
-             
-             const modal = document.getElementById('detailsModal');
-             modal.classList.remove('opacity-0', 'pointer-events-none');
-             modal.querySelector('.modal-content').classList.remove('scale-95');
- 
--            document.getElementById('taskNotes').onblur = () => TaskManager.updateNotes(document.getElementById('taskNotes').value);
-+            if (notesArea) {
-+                notesArea.onblur = () => TaskManager.updateNotes(notesArea.value);
-+            }
-         },
-         closeDetailsModal() {
-             this.currentDetailTaskId = null;
-             const modal = document.getElementById('detailsModal');
-             modal.classList.add('opacity-0');
-             modal.querySelector('.modal-content').classList.add('scale-95');
-             setTimeout(() => modal.classList.add('pointer-events-none'), 300);
-         },
-         showNotification(message, type = 'success') {
-              const warningDiv = document.getElementById('configWarning');
-              warningDiv.innerHTML = message;
-              warningDiv.classList.remove('hidden', 'bg-red-100', 'text-red-800', 'bg-green-100', 'text-green-800');
--             warningDiv.classList.add(type === 'success' ? 'bg-green-100' : 'bg-green-800', type === 'success' ? 'text-green-800' : 'text-red-800');
-+             warningDiv.classList.add(type === 'success' ? 'bg-green-100' : 'bg-red-100', type === 'success' ? 'text-green-800' : 'text-red-800');
-              setTimeout(() => {
-                 warningDiv.classList.add('hidden');
-              }, 5000)
-         }
-     };
-     
-     // --- TASK MANAGER --- //
-     const TaskManager = {
-         tasks: JSON.parse(localStorage.getItem('tasks')) || [],
-         idCounter: parseInt(localStorage.getItem('idCounter')) || 1,
-         editingTaskId: null,
-         init() {
-             GEMINI_API_KEY = localStorage.getItem('geminiApiKey') || '';
--            GoogleService.init();
-             this.render();
-         },
-         addTask(event) {
-             event.preventDefault();
-             const title = document.getElementById('taskTitle').value.trim();
-             const dueDateValue = document.getElementById('taskDueDate').value;
-             if (!title) return;
-             const task = {
-                 id: this.idCounter++, title,
-                 timeBox: parseInt(document.getElementById('taskTime').value) || 25,
-                 quadrant: parseInt(document.getElementById('taskQuadrant').value),
-                 completed: false, createdAt: new Date().toISOString(),
-                 dueDate: dueDateValue ? new Date(dueDateValue + 'T00:00:00').toISOString() : null,
-                 subtasks: [], notes: ''
-             };
-             this.tasks.push(task); this.saveAndRender(); event.target.reset();
-         },
-         editTask(taskId, evt = null) {
-             if (evt) evt.stopPropagation();
-             this.editingTaskId = taskId;
-             this.render();
-             if (taskId === null) { return; }
-             const input = document.querySelector(`.task-title-input[data-task-id='${taskId}']`);
-             if (input) {
-                 input.focus();
-                 input.select();
-             }
-         },
-         saveTaskTitle(taskId, newTitle) {
-             const task = this.tasks.find(t => t.id === taskId);
-             if (task && newTitle.trim()) {
-                 task.title = newTitle.trim();
-             }
-             this.editingTaskId = null;
-             this.saveAndRender();
-         },
-         deleteTask(taskId, evt = null) {
-             if (evt) evt.stopPropagation();
-             if (confirm('Are you sure you want to delete this task?')) { this.tasks = this.tasks.filter(t => t.id !== taskId); this.saveAndRender(); }
-         },
-         toggleComplete(taskId, evt = null) {
-             if (evt) evt.stopPropagation();
-             const task = this.tasks.find(t => t.id == taskId);
--            if(task) { task.completed = !task.completed; GoogleService.updateTask(task); this.saveAndRender(); }
-+            if(task) { task.completed = !task.completed; this.saveAndRender(); }
-         },
-         addSubtask(text, fromAI = false) {
-             const taskId = UI.currentDetailTaskId;
-             const task = this.tasks.find(t => t.id === taskId);
-             let subtaskText = text;
-             if (!fromAI) {
-                 const input = document.getElementById('newSubtaskInput');
-                 subtaskText = input.value.trim();
-             }
-             if (!task || !subtaskText) return;
-             if (!task.subtasks) task.subtasks = [];
-             const subtaskId = task.subtasks.length > 0 ? Math.max(...task.subtasks.map(s => s.id)) + 1 : 1;
-             task.subtasks.push({ id: subtaskId, text: subtaskText, completed: false });
-             if (!fromAI) {
-                 document.getElementById('newSubtaskInput').value = '';
-             }
-             this.saveAndRender();
-             UI.openDetailsModal(taskId, null);
-         },
-         toggleSubtask(subtaskId) {
-             const taskId = UI.currentDetailTaskId;
-             const task = this.tasks.find(t => t.id === taskId);
-             if (!task) return;
-             const subtask = task.subtasks.find(st => st.id === subtaskId);
-             if(subtask) subtask.completed = !subtask.completed;
-             this.saveAndRender();
-             UI.openDetailsModal(taskId, null);
-         },
-         deleteSubtask(subtaskId) {
-             const taskId = UI.currentDetailTaskId;
-             const task = this.tasks.find(t => t.id === taskId);
-             if (!task) return;
-             task.subtasks = task.subtasks.filter(st => st.id !== subtaskId);
-             this.saveAndRender();
-             UI.openDetailsModal(taskId, null);
-         },
-         updateNotes(notes) {
-             const taskId = UI.currentDetailTaskId;
-             const task = this.tasks.find(t => t.id === taskId);
-             if (task) { task.notes = notes; this.saveAndRender(); }
-         },
--        syncTasks(googleTasks) {
--            let updated = false;
--            googleTasks.forEach(gTask => {
--                const localTask = this.tasks.find(t => t.googleTaskId === gTask.id);
--                if (localTask) {
--                    const isGoogleCompleted = gTask.status === 'completed';
--                    if (localTask.completed !== isGoogleCompleted) { localTask.completed = isGoogleCompleted; updated = true; }
-+        saveDetails() {
-+            const taskId = UI.currentDetailTaskId;
-+            const task = this.tasks.find(t => t.id === taskId);
-+            if (!task) { return; }
-+
-+            const titleInput = document.getElementById('detailTitleInput');
-+            const quadrantSelect = document.getElementById('detailQuadrantSelect');
-+            const timeInput = document.getElementById('detailTimeInput');
-+            const dueDateInput = document.getElementById('detailDueDateInput');
-+            const completedCheckbox = document.getElementById('detailCompletedCheckbox');
-+
-+            if (titleInput && titleInput.value.trim()) {
-+                task.title = titleInput.value.trim();
-+            }
-+
-+            if (quadrantSelect) {
-+                const quadrantValue = parseInt(quadrantSelect.value, 10);
-+                if (quadrantValue >= 1 && quadrantValue <= 4) {
-+                    task.quadrant = quadrantValue;
-+                }
-+            }
-+
-+            if (timeInput) {
-+                const minutes = parseInt(timeInput.value, 10);
-+                if (!isNaN(minutes) && minutes > 0) {
-+                    task.timeBox = minutes;
-                 }
--            });
--            if (updated) { this.saveAndRender(); }
-+            }
-+
-+            if (dueDateInput) {
-+                const dueDateValue = dueDateInput.value;
-+                task.dueDate = dueDateValue ? new Date(dueDateValue + 'T00:00:00').toISOString() : null;
-+            }
-+
-+            if (completedCheckbox) {
-+                task.completed = completedCheckbox.checked;
-+            }
-+
-+            this.saveAndRender();
-+            UI.openDetailsModal(taskId, null);
-+            UI.showNotification('Task details updated.', 'success');
-+        },
-+        replaceTasks(newTasks) {
-+            this.tasks = newTasks;
-+            const maxId = this.tasks.reduce((max, task) => Math.max(max, task.id || 0), 0);
-+            this.idCounter = maxId + 1;
-+            this.saveAndRender();
-         },
-         moveTask(taskId, newQuadrant) { const task = this.tasks.find(t => t.id == taskId); if (task) { task.quadrant = newQuadrant; this.saveAndRender(); } },
-         dragStart(event, taskId) { 
-             event.stopPropagation(); 
-             event.dataTransfer.setData('text/plain', taskId);
-             event.currentTarget.classList.add('dragging');
-         },
-         dragEnd(event) {
-             event.currentTarget.classList.remove('dragging');
-         },
-         allowDrop(event) { event.preventDefault(); event.currentTarget.classList.add('drag-over'); },
-         dragLeave(event) {
-             event.currentTarget.classList.remove('drag-over');
-         },
-         drop(event) {
-             event.preventDefault(); event.currentTarget.classList.remove('drag-over');
-             const taskId = event.dataTransfer.getData('text/plain');
-             const newQuadrant = parseInt(event.currentTarget.dataset.quadrant);
-             this.moveTask(taskId, newQuadrant);
-         },
-         saveAndRender() { this.checkOverdueTasks(); localStorage.setItem('tasks', JSON.stringify(this.tasks)); localStorage.setItem('idCounter', this.idCounter); this.render(); },
-         checkOverdueTasks() {
-             const now = new Date();
-             this.tasks.forEach(task => { if (task.dueDate && !task.completed) { if (new Date(task.dueDate) < now) { task.quadrant = 1; } } });
-         },
-@@ -651,40 +713,38 @@
-                 if (hideCompleted) { quadrantTasks = quadrantTasks.filter(t => !t.completed); }
-                 document.getElementById(`count-${i}`).textContent = quadrantTasks.length;
-                 if (quadrantTasks.length === 0) { container.innerHTML = `<div class="p-4 text-center text-gray-500">No tasks here.</div>`; continue; }
-                 container.innerHTML = quadrantTasks.map(task => {
-                     const isRunning = Timer.currentTask && Timer.currentTask.id === task.id;
-                     const isOverdue = task.dueDate && !task.completed && new Date(task.dueDate) < new Date();
-                     
-                     const titleDisplay = this.editingTaskId === task.id
-                         ? `<input type="text" class="task-title-input" data-task-id="${task.id}" value="${task.title}"
-                                   onblur="TaskManager.saveTaskTitle(${task.id}, this.value)"
-                                   onkeydown="if(event.key === 'Enter') this.blur(); if(event.key === 'Escape') TaskManager.editTask(null, event)">`
-                         : `<p class="font-semibold text-gray-800 truncate task-title-text" onclick="TaskManager.editTask(${task.id}, event)">${task.title}</p>`;
-                     
-                     return `
-                     <div class="task flex items-center justify-between p-3 transition duration-200 ease-in-out bg-white border-l-4 rounded-lg shadow-sm ${task.completed ? 'completed opacity-60' : ''} ${isRunning ? 'running' : ''} ${isOverdue ? 'overdue' : ''} quadrant-${task.quadrant}-border" 
-                          draggable="true" ondragstart="TaskManager.dragStart(event, ${task.id})" ondragend="TaskManager.dragEnd(event)">
-                         <div class="flex-1 min-w-0 task-title">
-                            ${titleDisplay}
-                            <div class="flex items-center gap-3 mt-1 text-xs text-gray-500 task-meta">
-                                 ${task.dueDate ? `<span>📅 ${new Date(task.dueDate).toLocaleDateString()}</span>` : ''}
-                                 <span>⏱️ ${task.timeBox}m</span>
+        </div>
+    </div>
+    
+    <!-- Toast Notification Container -->
+    <div id="toast-container"></div>
+    
+    <!-- Firebase SDK -->
+    <script type="module">
+        // Import Firebase modules
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getFirestore, doc, addDoc, setDoc, updateDoc, deleteDoc, 
+            onSnapshot, collection, query, setLogLevel 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- CONFIGURATION --- //
+        let GEMINI_API_KEY = "";
+        
+        // --- FIREBASE SERVICE --- //
+        const FirebaseService = {
+            db: null,
+            auth: null,
+            userId: null,
+            appId: 'default-app-id',
+            tasksCollectionRef: null,
+            tasksUnsubscribe: null,
+
+            async init(onAuthReady) {
+                // setLogLevel('debug'); // Uncomment for detailed Firestore logs
+                
+                if (typeof __firebase_config === 'undefined' || !__firebase_config) {
+                    console.error("Firebase config is missing.");
+                    UI.showConfigWarning("<strong>Critical Error:</strong> Firebase configuration is missing. App cannot load data.");
+                    return;
+                }
+                const firebaseConfig = JSON.parse(__firebase_config);
+
+                this.appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+                try {
+                    const app = initializeApp(firebaseConfig);
+                    this.db = getFirestore(app);
+                    this.auth = getAuth(app);
+
+                    onAuthStateChanged(this.auth, async (user) => {
+                        if (user) {
+                            this.userId = user.uid;
+                            console.log("User authenticated with UID:", this.userId);
+                            
+                            const authSection = document.getElementById('authSection');
+                            if (authSection) {
+                                authSection.innerHTML = `<span class="px-3 py-1 text-xs font-medium text-gray-600 bg-gray-200 rounded-full">${this.userId}</span>`;
+                            }
+                            
+                            const collectionPath = `artifacts/${this.appId}/users/${this.userId}/tasks`;
+                            this.tasksCollectionRef = collection(this.db, collectionPath);
+                            
+                            onAuthReady(this.userId);
+                            
+                        } else {
+                            this.userId = null;
+                            if (this.tasksUnsubscribe) this.tasksUnsubscribe();
+                        }
+                        document.getElementById('auth-overlay')?.classList.add('hidden');
+                    });
+
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(this.auth, __initial_auth_token);
+                    } else {
+                        console.warn("No custom token found, signing in anonymously.");
+                        await signInAnonymously(this.auth);
+                    }
+                    
+                } catch (error) {
+                    console.error("Firebase initialization error:", error);
+                    UI.showConfigWarning(`<strong>Firebase Error:</strong> ${error.message}`);
+                    document.getElementById('auth-overlay')?.classList.add('hidden');
+                }
+            },
+
+            getTasksSnapshot(callback) {
+                if (!this.tasksCollectionRef) return;
+                if (this.tasksUnsubscribe) this.tasksUnsubscribe();
+
+                const q = query(this.tasksCollectionRef);
+                this.tasksUnsubscribe = onSnapshot(q, (querySnapshot) => {
+                    const tasks = [];
+                    querySnapshot.forEach((doc) => {
+                        tasks.push({ id: doc.id, ...doc.data() });
+                    });
+                    tasks.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+                    callback(tasks);
+                }, (error) => {
+                    console.error("Error getting tasks snapshot:", error);
+                    UI.showNotification("Error syncing tasks from database.", "error");
+                });
+            },
+
+            async addTask(task) {
+                if (!this.tasksCollectionRef) return;
+                try {
+                    await addDoc(this.tasksCollectionRef, task);
+                } catch (error) {
+                    console.error("Error adding task:", error);
+                    UI.showNotification("Failed to add task.", "error");
+                }
+            },
+
+            async updateTask(taskId, taskData) {
+                if (!this.tasksCollectionRef) return;
+                try {
+                    const taskDocRef = doc(this.tasksCollectionRef, taskId);
+                    await setDoc(taskDocRef, taskData, { merge: true });
+                } catch (error) {
+                    console.error("Error updating task:", error);
+                    UI.showNotification("Failed to update task.", "error");
+                }
+            },
+
+            async deleteTask(taskId) {
+                if (!this.tasksCollectionRef) return;
+                try {
+                    const taskDocRef = doc(this.tasksCollectionRef, taskId);
+                    await deleteDoc(taskDocRef);
+                } catch (error) {
+                    console.error("Error deleting task:", error);
+                    UI.showNotification("Failed to delete task.", "error");
+                }
+            }
+        };
+
+        // --- GEMINI AI SERVICE --- //
+        const GeminiService = {
+            init() {
+                GEMINI_API_KEY = localStorage.getItem('geminiApiKey') || '';
+            },
+
+            saveApiKey() {
+                const key = document.getElementById('geminiApiKeyInput').value.trim();
+                if (key) {
+                    GEMINI_API_KEY = key;
+                    localStorage.setItem('geminiApiKey', key);
+                    UI.showNotification("API Key saved successfully.", "success");
+                    UI.closeModal('settingsModal');
+                } else {
+                    UI.showNotification("Please enter a valid API Key.", "error");
+                }
+            },
+
+            setLoadingState(buttonId, isLoading) {
+                const button = document.getElementById(buttonId);
+                if (button) {
+                    const text = button.querySelector('.btn-text');
+                    const spinner = button.querySelector('.spinner');
+                    if (isLoading) {
+                        text.classList.add('hidden');
+                        spinner.classList.remove('hidden');
+                        button.disabled = true;
+                    } else {
+                        text.classList.remove('hidden');
+                        spinner.classList.add('hidden');
+                        button.disabled = false;
+                    }
+                }
+            },
+
+            async call(prompt) {
+                if (!GEMINI_API_KEY) {
+                    UI.showNotification("Gemini API Key is not set. Please add it in Settings.", "error");
+                    UI.openSettingsModal();
+                    return null;
+                }
+                
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${GEMINI_API_KEY}`;
+                
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                    });
+                    
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error?.message || `HTTP error! status: ${response.status}`);
+                    }
+                    
+                    const result = await response.json();
+                    return result.candidates[0].content.parts[0].text;
+                    
+                } catch (error) {
+                    console.error("Error calling Gemini API:", error);
+                    UI.showNotification(`AI Error: ${error.message}`, "error");
+                    return null;
+                }
+            },
+            
+            async generateSubtasks() {
+                this.setLoadingState('generateSubtasksBtn', true);
+                const task = TaskManager.tasks.find(t => t.id === UI.currentDetailTaskId);
+                if (!task) { this.setLoadingState('generateSubtasksBtn', false); return; }
+
+                const promptText = `Generate a comma-separated list of actionable sub-tasks for the task: "${task.title}". Provide only the list.`;
+                const result = await this.call(promptText);
+                if (result) {
+                    result.split(',').forEach(subtaskText => {
+                        if (subtaskText.trim()) {
+                            TaskManager.addSubtask(subtaskText.trim(), true);
+                        }
+                    });
+                }
+                this.setLoadingState('generateSubtasksBtn', false);
+            },
+            
+            async generateNotes() {
+                this.setLoadingState('generateNotesBtn', true);
+                const task = TaskManager.tasks.find(t => t.id === UI.currentDetailTaskId);
+                if (!task) { this.setLoadingState('generateNotesBtn', false); return; }
+
+                const promptText = `Generate helpful notes for the task: "${task.title}". The notes should be a short paragraph, offering a brief plan or key considerations.`;
+                const result = await this.call(promptText);
+                if (result) {
+                    const notesArea = document.getElementById('taskNotes');
+                    notesArea.value = result;
+                    TaskManager.updateNotes(result); // This will save to DB
+                }
+                this.setLoadingState('generateNotesBtn', false);
+            }
+        };
+
+        // --- TIMER --- //
+        const Timer = {
+            currentTask: null, duration: 0, remaining: 0, interval: null, isRunning: false,
+            
+            startFromTask(taskId, evt = null) {
+                if (evt) evt.stopPropagation();
+                const task = TaskManager.tasks.find(t => t.id === taskId);
+                if (!task) return;
+                
+                if (this.currentTask && this.currentTask.id === taskId) {
+                    this.isRunning ? this.pause() : this.start();
+                } else {
+                    if (this.isRunning) {
+                        this.stop(true, false); // Stop old timer, don't reset memory
+                    }
+                    this.currentTask = task;
+                    this.duration = task.timeBox * 60;
+                    this.remaining = task.remainingTime || this.duration; 
+                    this.showFullscreen();
+                    this.start();
+                }
+            },
+            start() {
+                if (!this.currentTask || this.isRunning) return;
+                this.isRunning = true;
+                this.interval = setInterval(() => {
+                    this.remaining--;
+                    this.updateFullscreenDisplay();
+                    if (this.remaining <= 0) {
+                        this.stop(false, true); // Stop and RESET timer memory
+                        UI.showNotification(`Time's up for: ${this.currentTask.title}`, 'info');
+                        TaskManager.toggleComplete(this.currentTask.id);
+                    }
+                }, 1000);
+                document.getElementById('timer-fullscreen-pause').classList.remove('hidden');
+                document.getElementById('timer-fullscreen-start').classList.add('hidden');
+            },
+            pause() {
+                this.isRunning = false;
+                clearInterval(this.interval);
+                if (this.currentTask) {
+                    this.currentTask.remainingTime = this.remaining;
+                    TaskManager.updateTask(this.currentTask);
+                }
+                document.getElementById('timer-fullscreen-pause').classList.add('hidden');
+                document.getElementById('timer-fullscreen-start').classList.remove('hidden');
+            },
+            stop(silent = false, resetTimer = false) {
+                this.pause(); 
+                
+                if (this.currentTask && resetTimer) {
+                    this.currentTask.remainingTime = null; // Reset remaining time
+                    TaskManager.updateTask(this.currentTask);
+                }
+                
+                this.currentTask = null; this.remaining = 0;
+                if (!silent) { this.hideFullscreen(); TaskManager.render(); }
+            },
+            showFullscreen() {
+                 document.getElementById('timer-fullscreen-task-title').textContent = this.currentTask.title;
+                 this.updateFullscreenDisplay();
+                 const timerScreen = document.getElementById('timer-fullscreen');
+                 timerScreen.classList.remove('hidden');
+                 setTimeout(() => timerScreen.classList.remove('opacity-0'), 10);
+            },
+            hideFullscreen() {
+                 const timerScreen = document.getElementById('timer-fullscreen');
+                 timerScreen.classList.add('opacity-0');
+                 setTimeout(() => timerScreen.classList.add('hidden'), 500);
+            },
+            updateFullscreenDisplay() {
+                const formatTime = (seconds) => {
+                    if (seconds < 0) seconds = 0;
+                    const m = Math.floor(seconds / 60); const s = seconds % 60;
+                    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+                };
+                document.getElementById('timer-fullscreen-display').textContent = formatTime(this.remaining);
+            }
+        };
+        
+        // --- UI MANAGER --- //
+        const UI = {
+            currentDetailTaskId: null,
+            taskToDeleteId: null,
+
+            openModal(modalId) {
+                const modal = document.getElementById(modalId);
+                if (!modal) {
+                    console.error("Modal not found:", modalId);
+                    return;
+                }
+                modal.classList.remove('opacity-0', 'pointer-events-none');
+                modal.querySelector('.modal-content').classList.remove('scale-95');
+            },
+            closeModal(modalId) {
+                const modal = document.getElementById(modalId);
+                if (!modal) return;
+                modal.classList.add('opacity-0');
+                modal.querySelector('.modal-content').classList.add('scale-95');
+                setTimeout(() => modal.classList.add('pointer-events-none'), 300);
+            },
+            
+            openDetailsModal(taskId, evt = null) {
+                if (evt) evt.stopPropagation();
+                this.currentDetailTaskId = taskId;
+                const task = TaskManager.tasks.find(t => t.id === taskId);
+                if (!task) return;
+
+                document.getElementById('detailsTitle').textContent = task.title;
+                document.getElementById('detailTitleInput').value = task.title;
+                document.getElementById('detailQuadrantSelect').value = task.quadrant;
+                document.getElementById('detailTimeInput').value = task.timeBox;
+                document.getElementById('detailDueDateInput').value = task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : '';
+                document.getElementById('detailCompletedCheckbox').checked = Boolean(task.completed);
+                document.getElementById('taskNotes').value = task.notes || '';
+                
+                const subtasksContainer = document.getElementById('subtasksContainer');
+                subtasksContainer.innerHTML = (task.subtasks || []).map(st => `
+                    <div class="flex items-center gap-2 p-2 bg-gray-100 rounded-md">
+                        <input type="checkbox" ${st.completed ? 'checked' : ''} data-action="toggle-subtask" data-subtask-id="${st.id}" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
+                        <span class="flex-grow ${st.completed ? 'line-through text-gray-500' : 'text-gray-800'}">${st.text}</span>
+                        <button data-action="delete-subtask" data-subtask-id="${st.id}" class="text-xs text-red-500 hover:text-red-700">Delete</button>
+                    </div>
+                `).join('') || '<p class="text-sm text-center text-gray-500">No sub-tasks yet.</p>';
+                
+                this.openModal('detailsModal');
+                
+                const notesArea = document.getElementById('taskNotes');
+                notesArea.onblur = null; 
+                notesArea.onblur = () => TaskManager.updateNotes(notesArea.value);
+            },
+            closeDetailsModal() {
+                this.currentDetailTaskId = null;
+                this.closeModal('detailsModal');
+            },
+
+            openDeleteModal(taskId, evt = null) {
+                if (evt) evt.stopPropagation();
+                this.taskToDeleteId = taskId;
+                this.openModal('deleteModal');
+            },
+            closeDeleteModal() {
+                this.taskToDeleteId = null;
+                this.closeModal('deleteModal');
+            },
+
+            openSettingsModal() {
+                document.getElementById('geminiApiKeyInput').value = GEMINI_API_KEY;
+                this.openModal('settingsModal');
+            },
+            
+            showNotification(message, type = 'info') {
+                 const container = document.getElementById('toast-container');
+                 const toast = document.createElement('div');
+                 let icon = 'ℹ️';
+                 let typeClass = 'toast-info';
+                 
+                 if (type === 'success') { icon = '✅'; typeClass = 'toast-success'; } 
+                 else if (type === 'error') { icon = '❌'; typeClass = 'toast-error'; }
+                 
+                 toast.className = `toast ${typeClass}`;
+                 toast.innerHTML = `<span class="toast-icon">${icon}</span><span class="flex-1">${message}</span>`;
+                 container.appendChild(toast);
+                 setTimeout(() => { toast.remove(); }, 5000);
+            },
+
+            showConfigWarning(message) {
+                const warningDiv = document.getElementById('configWarning');
+                if (warningDiv) {
+                    warningDiv.innerHTML = message;
+                    warningDiv.classList.remove('hidden');
+                }
+            }
+        };
+        
+        // --- TASK MANAGER --- //
+        const TaskManager = {
+            tasks: [], 
+            editingTaskId: null,
+
+            init(userId) {
+                FirebaseService.getTasksSnapshot(this.onTasksUpdated.bind(this));
+            },
+
+            onTasksUpdated(tasks) {
+                this.tasks = tasks;
+                this.checkOverdueTasks(false); // Check without saving, as snapshot is source of truth
+                this.render();
+            },
+
+            addTask(event) {
+                event.preventDefault();
+                const title = document.getElementById('taskTitle').value.trim();
+                const dueDateValue = document.getElementById('taskDueDate').value;
+                if (!title) return;
+                
+                const task = {
+                    title,
+                    timeBox: parseInt(document.getElementById('taskTime').value) || 25,
+                    quadrant: parseInt(document.getElementById('taskQuadrant').value),
+                    completed: false, 
+                    createdAt: new Date().toISOString(),
+                    dueDate: dueDateValue ? new Date(dueDateValue + 'T00:00:00').toISOString() : null,
+                    subtasks: [], 
+                    notes: '',
+                    remainingTime: null
+                };
+                
+                FirebaseService.addTask(task);
+                UI.showNotification("Task added!", "success");
+                event.target.reset();
+                UI.closeModal('addTaskModal');
+            },
+            
+            updateTask(task) {
+                const { id, ...taskData } = task;
+                FirebaseService.updateTask(id, taskData);
+            },
+
+            editTask(taskId, evt = null) {
+                if (evt) evt.stopPropagation();
+                this.editingTaskId = taskId;
+                this.render();
+                if (taskId === null) { return; }
+                const input = document.querySelector(`.task-title-input[data-task-id='${taskId}']`);
+                if (input) {
+                    input.focus();
+                    input.select();
+                }
+            },
+            
+            saveTaskTitle(taskId, newTitle) {
+                const task = this.tasks.find(t => t.id === taskId);
+                if (task && newTitle.trim()) {
+                    task.title = newTitle.trim();
+                    this.updateTask(task);
+                }
+                this.editingTaskId = null;
+            },
+            
+            confirmDelete() {
+                if (UI.taskToDeleteId) {
+                    FirebaseService.deleteTask(UI.taskToDeleteId);
+                    UI.showNotification("Task deleted.", "success");
+                }
+                UI.closeDeleteModal();
+            },
+
+            toggleComplete(taskId, evt = null) {
+                if (evt) evt.stopPropagation();
+                const task = this.tasks.find(t => t.id == taskId);
+                if(task) { 
+                    task.completed = !task.completed; 
+                    this.updateTask(task); 
+                }
+            },
+            
+            addSubtask(text, fromAI = false) {
+                const taskId = UI.currentDetailTaskId;
+                const task = this.tasks.find(t => t.id === taskId);
+                let subtaskText = text;
+                
+                if (!fromAI) {
+                    const input = document.getElementById('newSubtaskInput');
+                    subtaskText = input.value.trim();
+                }
+                if (!task || !subtaskText) return;
+                if (!task.subtasks) task.subtasks = [];
+                
+                const subtaskId = task.subtasks.length > 0 ? Math.max(...task.subtasks.map(s => s.id)) + 1 : 1;
+                task.subtasks.push({ id: subtaskId, text: subtaskText, completed: false });
+                
+                if (!fromAI) {
+                    document.getElementById('newSubtaskInput').value = '';
+                }
+                
+                this.updateTask(task); 
+                UI.openDetailsModal(taskId, null); // Re-open to refresh
+            },
+            
+            toggleSubtask(subtaskId) {
+                const taskId = UI.currentDetailTaskId;
+                const task = this.tasks.find(t => t.id === taskId);
+                if (!task) return;
+                const subtask = task.subtasks.find(st => st.id === subtaskId);
+                if(subtask) subtask.completed = !subtask.completed;
+                this.updateTask(task);
+                UI.openDetailsModal(taskId, null);
+            },
+            
+            deleteSubtask(subtaskId) {
+                const taskId = UI.currentDetailTaskId;
+                const task = this.tasks.find(t => t.id === taskId);
+                if (!task) return;
+                task.subtasks = task.subtasks.filter(st => st.id !== subtaskId);
+                this.updateTask(task);
+                UI.openDetailsModal(taskId, null);
+            },
+            
+            updateNotes(notes) {
+                const taskId = UI.currentDetailTaskId;
+                const task = this.tasks.find(t => t.id === taskId);
+                if (task) { 
+                    task.notes = notes; 
+                    this.updateTask(task); 
+                }
+            },
+            
+            saveDetails() {
+                const taskId = UI.currentDetailTaskId;
+                const task = this.tasks.find(t => t.id === taskId);
+                if (!task) { return; }
+
+                const titleInput = document.getElementById('detailTitleInput');
+                const quadrantSelect = document.getElementById('detailQuadrantSelect');
+                const timeInput = document.getElementById('detailTimeInput');
+                const dueDateInput = document.getElementById('detailDueDateInput');
+                const completedCheckbox = document.getElementById('detailCompletedCheckbox');
+
+                if (titleInput && titleInput.value.trim()) {
+                    task.title = titleInput.value.trim();
+                }
+                task.quadrant = parseInt(quadrantSelect.value, 10);
+                
+                const newTimeBox = parseInt(timeInput.value, 10) || 25;
+                if (task.timeBox !== newTimeBox) {
+                    task.remainingTime = null; // Reset timer if duration changes
+                }
+                task.timeBox = newTimeBox;
+
+                const dueDateValue = dueDateInput.value;
+                task.dueDate = dueDateValue ? new Date(dueDateValue + 'T00:00:00').toISOString() : null;
+                task.completed = completedCheckbox.checked;
+
+                this.updateTask(task); 
+                UI.showNotification('Task details updated.', 'success');
+            },
+            
+            moveTask(taskId, newQuadrant) { 
+                const task = this.tasks.find(t => t.id == taskId); 
+                if (task) { 
+                    task.quadrant = newQuadrant; 
+                    this.updateTask(task); 
+                } 
+            },
+
+            dragStart(event, taskId) { 
+                event.stopPropagation(); 
+                event.dataTransfer.setData('text/plain', taskId);
+                event.currentTarget.classList.add('dragging');
+            },
+            dragEnd(event) {
+                event.currentTarget.classList.remove('dragging');
+            },
+            allowDrop(event) { event.preventDefault(); event.currentTarget.classList.add('drag-over'); },
+            dragLeave(event) { event.currentTarget.classList.remove('drag-over'); },
+            drop(event) {
+                event.preventDefault(); 
+                event.currentTarget.classList.remove('drag-over');
+                const taskId = event.dataTransfer.getData('text/plain');
+                const newQuadrant = parseInt(event.currentTarget.dataset.quadrant);
+                this.moveTask(taskId, newQuadrant);
+            },
+            
+            checkOverdueTasks(save = true) {
+                const now = new Date();
+                let changed = false;
+                this.tasks.forEach(task => { 
+                    if (task.dueDate && !task.completed) { 
+                        if (new Date(task.dueDate) < now && task.quadrant !== 1) { 
+                            task.quadrant = 1; 
+                            if(save) this.updateTask(task);
+                            changed = true;
+                        } 
+                    } 
+                });
+                if (changed && save) {
+                    UI.showNotification("Overdue tasks were moved to 'Urgent & Important'.", "info");
+                }
+            },
+            
+            render() {
+                if (Timer.isRunning) return; 
+                
+                for (let i = 1; i <= 4; i++) {
+                    const container = document.getElementById(`tasks-${i}`);
+                    let quadrantTasks = this.tasks.filter(t => t.quadrant == i);
+                    
+                    document.getElementById(`count-${i}`).textContent = quadrantTasks.length;
+                    
+                    if (quadrantTasks.length === 0) { 
+                        container.innerHTML = `<div class="p-4 text-center text-gray-500">No tasks here.</div>`; 
+                        continue; 
+                    }
+                    
+                    container.innerHTML = quadrantTasks.map(task => {
+                        const isRunning = Timer.currentTask && Timer.currentTask.id === task.id;
+                        const isOverdue = task.dueDate && !task.completed && new Date(task.dueDate) < new Date();
+                        
+                        const titleDisplay = this.editingTaskId === task.id
+                            ? `<input type="text" class="task-title-input" data-task-id="${task.id}" value="${task.title}"
+                                      onblur="TaskManager.saveTaskTitle('${task.id}', this.value)"
+                                      onkeydown="if(event.key === 'Enter') this.blur(); if(event.key === 'Escape') TaskManager.editTask(null, event)">`
+                            : `<p class="font-semibold text-gray-800 truncate task-title-text" data-action="edit-title">${task.title}</p>`;
+                        
+                        let timeDisplay = `${task.timeBox}m`;
+                        if (task.remainingTime && task.remainingTime > 0 && task.remainingTime < task.timeBox * 60) {
+                            timeDisplay = `~${Math.ceil(task.remainingTime / 60)}m left`;
+                        }
+
+                        return `
+                        <div class="task flex items-center justify-between p-3 transition duration-200 ease-in-out bg-white border-l-4 rounded-lg shadow-sm ${task.completed ? 'completed' : ''} ${isRunning ? 'running' : ''} ${isOverdue ? 'overdue' : ''} quadrant-${task.quadrant}-border" 
+                             data-task-id="${task.id}" draggable="true" data-action="drag-start">
+                            <div class="flex-1 min-w-0 task-title cursor-pointer" data-action="open-details">
+                               ${titleDisplay}
+                               <div class="flex items-center gap-3 mt-1 text-xs text-gray-500 task-meta">
+                                    ${task.dueDate ? `<span>📅 ${new Date(task.dueDate).toLocaleDateString()}</span>` : ''}
+                                    <span>⏱️ ${timeDisplay}</span>
+                               </div>
                             </div>
-                         </div>
-                         <div class="flex items-center gap-1 ml-2 task-actions">
-                              <button title="Start Timer" onclick="Timer.startFromTask(${task.id}, event)" class="p-1 text-gray-400 rounded-full task-btn hover:bg-gray-200 hover:text-yellow-500">⏱️</button>
--                             <button title="Details" onclick="UI.openDetailsModal(${task.id}, event)" class="p-1 text-gray-400 rounded-full task-btn hover:bg-gray-200 hover:text-blue-500">📝</button>
--                             <button title="Add to Google Calendar" onclick='GoogleService.addToCalendar(${JSON.stringify(task)}, event)' ${!GoogleService.isLoggedIn ? 'disabled' : ''} class="p-1 text-gray-400 rounded-full task-btn hover:bg-gray-200 hover:text-blue-500">📅</button>
--                             <button title="Add to Google Tasks" onclick='GoogleService.addToTasks(${JSON.stringify(task)}, event)' ${!GoogleService.isLoggedIn ? 'disabled' : ''} class="p-1 text-gray-400 rounded-full task-btn hover:bg-gray-200 hover:text-green-500">✔️</button>
-+                             <button title="Edit Details" onclick="UI.openDetailsModal(${task.id}, event)" class="p-1 text-gray-400 rounded-full task-btn hover:bg-gray-200 hover:text-blue-500">📝</button>
-                             <button title="Mark as ${task.completed ? 'Incomplete' : 'Complete'}" onclick="TaskManager.toggleComplete(${task.id}, event)" class="p-1 text-gray-400 rounded-full task-btn hover:bg-gray-200">${task.completed ? '↩️' : '✅'}</button>
-                             <button title="Delete Task" onclick="TaskManager.deleteTask(${task.id}, event)" class="p-1 text-gray-400 rounded-full task-btn hover:bg-gray-200 hover:text-red-500">🗑️</button>
-                         </div>
-                     </div>
-                 `}).join('');
-             }
-         },
-     };
-     TaskManager.init();
-     </script>
- </body>
- </html>
+                            <div class="flex items-center gap-1 ml-2 task-actions">
+                                 <button title="Start Timer" data-action="start-timer" class="p-1 text-gray-400 rounded-full task-btn hover:bg-gray-200 hover:text-yellow-500">⏱️</button>
+                                <button title="Mark as ${task.completed ? 'Incomplete' : 'Complete'}" data-action="toggle-complete" class="p-1 text-gray-400 rounded-full task-btn hover:bg-gray-200">${task.completed ? '↩️' : '✅'}</button>
+                                <button title="Delete Task" data-action="open-delete-modal" class="p-1 text-gray-400 rounded-full task-btn hover:bg-gray-200 hover:text-red-500">🗑️</button>
+                            </div>
+                        </div>
+                    `}).join('');
+                }
+            },
+        };
+
+        // --- APP INITIALIZER --- //
+        const App = {
+            init() {
+                console.log("App initializing...");
+                GeminiService.init();
+                FirebaseService.init(this.onAuthReady);
+                
+                // Bind listeners
+                this.bindDirectListeners();    // For static elements by ID
+                this.bindDelegatedListeners(); // For dynamic/delegated actions
+            },
+
+            onAuthReady(userId) {
+                console.log("Auth is ready. User:", userId);
+                TaskManager.init(userId);
+            },
+            
+            // Listeners for static, unique elements bound by ID
+            bindDirectListeners() {
+                // FIXED: Removed button listeners from here
+                
+                document.getElementById('addTaskForm').addEventListener('submit', (e) => TaskManager.addTask(e));
+                
+                document.getElementById('timer-fullscreen-pause').addEventListener('click', () => Timer.pause());
+                document.getElementById('timer-fullscreen-start').addEventListener('click', () => Timer.start());
+                document.getElementById('timer-fullscreen-stop').addEventListener('click', () => Timer.stop());
+
+                document.querySelectorAll('.quadrant').forEach(quadrant => {
+                    quadrant.addEventListener('dragover', TaskManager.allowDrop);
+                    quadrant.addEventListener('dragleave', TaskManager.dragLeave);
+                    quadrant.addEventListener('drop', TaskManager.drop);
+                });
+                
+                document.getElementById('detailsModal').addEventListener('keydown', (e) => {
+                    if (e.target.id === 'newSubtaskInput' && e.key === 'Enter') {
+                        TaskManager.addSubtask(null, false);
+                    }
+                });
+            },
+
+            // Listeners for dynamic content (tasks) and modals, using event delegation
+            bindDelegatedListeners() {
+                document.body.addEventListener('click', (e) => {
+                    const actionTarget = e.target.closest('[data-action]');
+                    if (!actionTarget) return;
+
+                    const action = actionTarget.dataset.action;
+                    const taskTarget = e.target.closest('.task');
+                    const taskId = taskTarget?.dataset.taskId;
+
+                    switch (action) {
+                        // FIXED: Added static button actions here
+                        case 'open-settings': UI.openSettingsModal(); break;
+                        case 'open-add-modal': UI.openModal('addTaskModal'); break;
+
+                        // Task Actions
+                        case 'open-details': UI.openDetailsModal(taskId, e); break;
+                        case 'edit-title': TaskManager.editTask(taskId, e); break;
+                        case 'start-timer': Timer.startFromTask(taskId, e); break;
+                        case 'toggle-complete': TaskManager.toggleComplete(taskId, e); break;
+                        case 'open-delete-modal': UI.openDeleteModal(taskId, e); break;
+                        
+                        // Modal Actions
+                        case 'close-modal': UI.closeModal(e.target.closest('.modal').id); break;
+                        case 'save-api-key': GeminiService.saveApiKey(); break;
+                        case 'confirm-delete': TaskManager.confirmDelete(); break;
+                        
+                        // Details Modal Actions
+                        case 'save-details': TaskManager.saveDetails(); break;
+                        case 'gen-subtasks': GeminiService.generateSubtasks(); break;
+                        case 'gen-notes': GeminiService.generateNotes(); break;
+                        case 'add-subtask': TaskManager.addSubtask(null, false); break;
+                        case 'toggle-subtask': 
+                            TaskManager.toggleSubtask(Number(actionTarget.dataset.subtaskId)); 
+                            break;
+                        case 'delete-subtask': 
+                            TaskManager.deleteSubtask(Number(actionTarget.dataset.subtaskId)); 
+                            break;
+                    }
+                });
+                
+                const mainContent = document.getElementById('main-content');
+                
+                mainContent.addEventListener('focusout', (e) => {
+                    if (e.target.classList.contains('task-title-input')) {
+                        TaskManager.saveTaskTitle(e.target.dataset.taskId, e.target.value);
+                    }
+                });
+                mainContent.addEventListener('keydown', (e) => {
+                    if (e.target.classList.contains('task-title-input')) {
+                        if (e.key === 'Enter') e.target.blur();
+                        if (e.key === 'Escape') TaskManager.editTask(null, e);
+                    }
+                });
+                
+                document.body.addEventListener('dragstart', (e) => {
+                    const dragTarget = e.target.closest('[data-action="drag-start"]');
+                    if (dragTarget) {
+                        const taskId = dragTarget.closest('.task')?.dataset.taskId;
+                        TaskManager.dragStart(e, taskId);
+                    }
+                });
+                document.body.addEventListener('dragend', (e) => {
+                     if (e.target.classList.contains('task')) {
+                         TaskManager.dragEnd(e);
+                     }
+                });
+            }
+        };
+        
+        // --- GLOBAL INITIALIZATION --- //
+        document.addEventListener('DOMContentLoaded', () => App.init());
+        
+    </script>
+</body>
+</html>
+
+
