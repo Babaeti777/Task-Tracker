@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale-1.0, user-scalable=no">
     <title>Eisenhower Matrix - AI Task Manager</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -32,52 +32,17 @@
         .task-title-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.4); }
         .spinner { border-top-color: #ffffff; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
-
-        /* Task Actions Visibility */
         .task .task-actions { visibility: hidden; opacity: 0; transition: opacity 0.2s ease-in-out; }
         .task:hover .task-actions { visibility: visible; opacity: 1; }
         .task-btn { font-size: 1.1rem; line-height: 1; }
         .task.completed { background-color: #f8f9fa; opacity: 0.6; }
         .task.completed .task-title-text { text-decoration: line-through; }
-        
-        /* Timer Fullscreen */
-        #timer-fullscreen {
-            transition: opacity 0.5s ease-in-out;
-            background: linear-gradient(145deg, #444, #222);
-        }
-        #timer-fullscreen-display {
-            font-size: clamp(4rem, 25vw, 12rem);
-            font-variant-numeric: tabular-nums;
-            text-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
-        }
+        #timer-fullscreen { transition: opacity 0.5s ease-in-out; background: linear-gradient(145deg, #444, #222); }
+        #timer-fullscreen-display { font-size: clamp(4rem, 25vw, 12rem); font-variant-numeric: tabular-nums; text-shadow: 0 0 20px rgba(255, 255, 255, 0.2); }
         .pulse-animation { animation: pulse 4s ease-in-out infinite; }
-        @keyframes pulse {
-            0% { transform: scale(1); opacity: 0.7; }
-            50% { transform: scale(1.05); opacity: 1; }
-            100% { transform: scale(1); opacity: 0.7; }
-        }
-
-        /* Toast Notification */
-        #toast-container {
-            position: fixed;
-            bottom: 1.5rem;
-            right: 1.5rem;
-            z-index: 100;
-            display: flex;
-            flex-direction: column;
-            gap: 0.75rem;
-        }
-        .toast {
-            display: flex;
-            align-items: center;
-            width: 320px;
-            padding: 1rem;
-            border-radius: 0.5rem;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-            opacity: 0;
-            transform: translateX(100%);
-            animation: slideIn 0.3s ease-out forwards, fadeOut 0.3s ease-in 4.7s forwards;
-        }
+        @keyframes pulse { 0% { transform: scale(1); opacity: 0.7; } 50% { transform: scale(1.05); opacity: 1; } 100% { transform: scale(1); opacity: 0.7; } }
+        #toast-container { position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 100; display: flex; flex-direction: column; gap: 0.75rem; }
+        .toast { display: flex; align-items: center; width: 320px; padding: 1rem; border-radius: 0.5rem; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); opacity: 0; transform: translateX(100%); animation: slideIn 0.3s ease-out forwards, fadeOut 0.3s ease-in 4.7s forwards; }
         .toast-success { background-color: #ecfdf5; border: 1px solid #bbf7d0; color: #065f46; }
         .toast-error { background-color: #fef2f2; border: 1px solid #fecaca; color: #991b1b; }
         .toast-info { background-color: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; }
@@ -88,20 +53,15 @@
 </head>
 <body class="bg-gradient-to-br from-gray-50 to-gray-200">
 
-    <!-- Config/Error Bar -->
     <div id="configWarning" class="hidden fixed top-0 left-0 right-0 z-[101] px-4 py-3 text-sm font-medium text-center text-red-800 bg-red-100 border-b-2 border-red-200"></div>
-    
-    <!-- Auth/Loading Overlay -->
     <div id="auth-overlay" class="fixed inset-0 z-[99] flex flex-col items-center justify-center gap-4 bg-gray-100/90 backdrop-blur-sm">
         <div class="w-12 h-12 border-4 border-blue-500 rounded-full border-t-transparent animate-spin"></div>
         <p class="text-lg font-semibold text-gray-700">Connecting to database...</p>
     </div>
 
-    <!-- New Header Bar -->
     <header class="fixed top-0 left-0 right-0 z-40 flex items-center justify-between h-16 px-4 bg-white shadow-md sm:px-6 lg:px-8">
         <h1 class="text-2xl font-bold tracking-tight text-gray-800">Eisenhower</h1>
         <div class="flex items-center gap-4">
-            <!-- FIXED: Added data-action -->
             <button id="openSettingsBtn" data-action="open-settings" class="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-gray-700 transition bg-gray-200 rounded-lg hover:bg-gray-300">
                 <span>⚙️</span>
                 <span class="hidden sm:inline">AI Settings</span>
@@ -112,8 +72,7 @@
         </div>
     </header>
 
-    <!-- Main Content -->
-    <main id="main-content" class="pt-24 pb-24"> <!-- Added padding top for fixed header -->
+    <main id="main-content" class="pt-24 pb-24">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:gap-8">
                 <div class="quadrant quadrant-1 bg-white border-t-4 border-gray-200 rounded-2xl shadow-lg" data-quadrant="1">
@@ -132,13 +91,11 @@
         </div>
     </main>
     
-    <!-- New Floating Action Button (FAB) -->
-    <!-- FIXED: Added data-action -->
     <button id="openAddModalBtn" data-action="open-add-modal" title="Add New Task" class="fixed z-40 flex items-center justify-center w-16 h-16 text-3xl font-light text-white bg-blue-600 rounded-full shadow-lg bottom-6 right-6 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
         +
     </button>
 
-    <!-- Timer Fullscreen Overlay -->
+    <!-- Modals (Timer, Add, Details, Delete, Settings) -->
     <div id="timer-fullscreen" class="fixed inset-0 z-50 flex-col items-center justify-center hidden text-white opacity-0">
         <div class="text-center pulse-animation">
             <h2 id="timer-fullscreen-task-title" class="mb-4 text-4xl font-semibold opacity-80"></h2>
@@ -151,7 +108,6 @@
         </div>
     </div>
     
-    <!-- New Add Task Modal -->
     <div id="addTaskModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 transition-opacity duration-300 bg-black bg-opacity-50 opacity-0 pointer-events-none modal">
         <div class="w-full max-w-lg p-6 bg-white modal-content rounded-2xl shadow-2xl scale-95 transform-gpu transition-transform duration-300">
             <div class="flex items-center justify-between pb-3 border-b border-gray-200">
@@ -192,7 +148,6 @@
         </div>
     </div>
 
-    <!-- Details Modal -->
     <div id="detailsModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 transition-opacity duration-300 bg-black bg-opacity-50 opacity-0 pointer-events-none modal">
         <div class="w-full max-w-lg p-6 bg-white modal-content rounded-2xl shadow-2xl scale-95 transform-gpu transition-transform duration-300">
             <div class="flex items-center justify-between pb-3 border-b border-gray-200">
@@ -267,7 +222,6 @@
         </div>
     </div>
     
-    <!-- Delete Confirmation Modal -->
     <div id="deleteModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 transition-opacity duration-300 bg-black bg-opacity-50 opacity-0 pointer-events-none modal">
         <div class="w-full max-w-sm p-6 bg-white modal-content rounded-2xl shadow-2xl scale-95 transform-gpu transition-transform duration-300">
             <h3 class="text-lg font-semibold text-gray-900">Delete Task</h3>
@@ -283,7 +237,6 @@
         </div>
     </div>
     
-    <!-- Settings Modal -->
     <div id="settingsModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 transition-opacity duration-300 bg-black bg-opacity-50 opacity-0 pointer-events-none modal">
         <div class="w-full max-w-md p-6 bg-white modal-content rounded-2xl shadow-2xl scale-95 transform-gpu transition-transform duration-300">
             <div class="flex items-center justify-between pb-3 border-b border-gray-200">
@@ -306,10 +259,8 @@
         </div>
     </div>
     
-    <!-- Toast Notification Container -->
     <div id="toast-container"></div>
     
-    <!-- Firebase SDK -->
     <script type="module">
         // Import Firebase modules
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -319,7 +270,34 @@
             onSnapshot, collection, query, setLogLevel 
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // --- CONFIGURATION --- //
+        // --- PASTE YOUR FIREBASE CONFIG HERE --- //
+        // 
+        // 1. Create a Firebase project at console.firebase.google.com
+        // 2. Create a "Web App" (</>) and copy the config object.
+        // 3. Paste it here, replacing `null`.
+        //
+        // const firebaseConfig = {
+        //   apiKey: "...",
+        //   authDomain: "...",
+        //   projectId: "...",
+        //   storageBucket: "...",
+        //   messagingSenderId: "...",
+        //   appId: "..."
+        // };
+        //
+        // ⬇️ PASTE YOUR CONFIG OBJECT HERE ⬇️
+        const USER_PROVIDED_FIREBASE_CONFIG =
+const firebaseConfig = {
+  apiKey: "AIzaSyCkykWc8jK3CONSL0TddJj3J8fFYie17lE",
+  authDomain: "task-1c051.firebaseapp.com",
+  projectId: "task-1c051",
+  storageBucket: "task-1c051.firebasestorage.app",
+  messagingSenderId: "574407276539",
+  appId: "1:574407276539:web:f524f9e663421c6255bd5e",
+  measurementId: "G-KDR87DQGVQ"
+}; ; 
+        
+        // --- GEMINI API KEY (Can be set in UI) --- //
         let GEMINI_API_KEY = "";
         
         // --- FIREBASE SERVICE --- //
@@ -332,16 +310,30 @@
             tasksUnsubscribe: null,
 
             async init(onAuthReady) {
-                // setLogLevel('debug'); // Uncomment for detailed Firestore logs
+                // setLogLevel('debug');
                 
-                if (typeof __firebase_config === 'undefined' || !__firebase_config) {
+                // --- MODIFIED LOGIC --- //
+                // 1. Check for user-provided config first
+                let firebaseConfig;
+                if (USER_PROVIDED_FIREBASE_CONFIG) {
+                    firebaseConfig = USER_PROVIDED_FIREBASE_CONFIG;
+                    console.log("Using user-provided Firebase config.");
+                } 
+                // 2. If not, check for environment config
+                else if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+                    firebaseConfig = JSON.parse(__firebase_config);
+                    console.log("Using environment-provided Firebase config.");
+                } 
+                // 3. If neither, show error
+                else {
                     console.error("Firebase config is missing.");
-                    UI.showConfigWarning("<strong>Critical Error:</strong> Firebase configuration is missing. App cannot load data.");
+                    UI.showConfigWarning("<strong>Critical Error:</strong> Firebase configuration is missing. Add your `firebaseConfig` object to the script to fix this.");
+                    document.getElementById('auth-overlay')?.classList.add('hidden');
                     return;
                 }
-                const firebaseConfig = JSON.parse(__firebase_config);
+                // --- END MODIFIED LOGIC --- //
 
-                this.appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                this.appId = typeof __app_id !== 'undefined' ? __app_id : (firebaseConfig.projectId || 'default-app-id');
 
                 try {
                     const app = initializeApp(firebaseConfig);
@@ -358,6 +350,7 @@
                                 authSection.innerHTML = `<span class="px-3 py-1 text-xs font-medium text-gray-600 bg-gray-200 rounded-full">${this.userId}</span>`;
                             }
                             
+                            // Use a consistent collection path
                             const collectionPath = `artifacts/${this.appId}/users/${this.userId}/tasks`;
                             this.tasksCollectionRef = collection(this.db, collectionPath);
                             
@@ -367,19 +360,22 @@
                             this.userId = null;
                             if (this.tasksUnsubscribe) this.tasksUnsubscribe();
                         }
+                        // Only hide overlay AFTER first auth state change
                         document.getElementById('auth-overlay')?.classList.add('hidden');
                     });
 
+                    // Sign in (Try environment token first, fallback to anonymous)
                     if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                         await signInWithCustomToken(this.auth, __initial_auth_token);
                     } else {
-                        console.warn("No custom token found, signing in anonymously.");
+                        // This is the flow that will run for self-hosting
+                        console.log("No custom token found, signing in anonymously.");
                         await signInAnonymously(this.auth);
                     }
                     
                 } catch (error) {
                     console.error("Firebase initialization error:", error);
-                    UI.showConfigWarning(`<strong>Firebase Error:</strong> ${error.message}`);
+                    UI.showConfigWarning(`<strong>Firebase Error:</strong> ${error.message}. <br>Did you enable Anonymous Sign-In in the Firebase console?`);
                     document.getElementById('auth-overlay')?.classList.add('hidden');
                 }
             },
@@ -473,7 +469,7 @@
             async call(prompt) {
                 if (!GEMINI_API_KEY) {
                     UI.showNotification("Gemini API Key is not set. Please add it in Settings.", "error");
-                    UI.openSettingsModal();
+                    UI.openModal('settingsModal');
                     return null;
                 }
                 
@@ -547,7 +543,7 @@
                     this.isRunning ? this.pause() : this.start();
                 } else {
                     if (this.isRunning) {
-                        this.stop(true, false); // Stop old timer, don't reset memory
+                        this.stop(true, false);
                     }
                     this.currentTask = task;
                     this.duration = task.timeBox * 60;
@@ -563,7 +559,7 @@
                     this.remaining--;
                     this.updateFullscreenDisplay();
                     if (this.remaining <= 0) {
-                        this.stop(false, true); // Stop and RESET timer memory
+                        this.stop(false, true); 
                         UI.showNotification(`Time's up for: ${this.currentTask.title}`, 'info');
                         TaskManager.toggleComplete(this.currentTask.id);
                     }
@@ -583,12 +579,10 @@
             },
             stop(silent = false, resetTimer = false) {
                 this.pause(); 
-                
                 if (this.currentTask && resetTimer) {
-                    this.currentTask.remainingTime = null; // Reset remaining time
+                    this.currentTask.remainingTime = null;
                     TaskManager.updateTask(this.currentTask);
                 }
-                
                 this.currentTask = null; this.remaining = 0;
                 if (!silent) { this.hideFullscreen(); TaskManager.render(); }
             },
@@ -621,10 +615,7 @@
 
             openModal(modalId) {
                 const modal = document.getElementById(modalId);
-                if (!modal) {
-                    console.error("Modal not found:", modalId);
-                    return;
-                }
+                if (!modal) { console.error("Modal not found:", modalId); return; }
                 modal.classList.remove('opacity-0', 'pointer-events-none');
                 modal.querySelector('.modal-content').classList.remove('scale-95');
             },
@@ -635,7 +626,6 @@
                 modal.querySelector('.modal-content').classList.add('scale-95');
                 setTimeout(() => modal.classList.add('pointer-events-none'), 300);
             },
-            
             openDetailsModal(taskId, evt = null) {
                 if (evt) evt.stopPropagation();
                 this.currentDetailTaskId = taskId;
@@ -669,7 +659,6 @@
                 this.currentDetailTaskId = null;
                 this.closeModal('detailsModal');
             },
-
             openDeleteModal(taskId, evt = null) {
                 if (evt) evt.stopPropagation();
                 this.taskToDeleteId = taskId;
@@ -679,27 +668,22 @@
                 this.taskToDeleteId = null;
                 this.closeModal('deleteModal');
             },
-
             openSettingsModal() {
                 document.getElementById('geminiApiKeyInput').value = GEMINI_API_KEY;
                 this.openModal('settingsModal');
             },
-            
             showNotification(message, type = 'info') {
                  const container = document.getElementById('toast-container');
                  const toast = document.createElement('div');
                  let icon = 'ℹ️';
                  let typeClass = 'toast-info';
-                 
                  if (type === 'success') { icon = '✅'; typeClass = 'toast-success'; } 
                  else if (type === 'error') { icon = '❌'; typeClass = 'toast-error'; }
-                 
                  toast.className = `toast ${typeClass}`;
                  toast.innerHTML = `<span class="toast-icon">${icon}</span><span class="flex-1">${message}</span>`;
                  container.appendChild(toast);
                  setTimeout(() => { toast.remove(); }, 5000);
             },
-
             showConfigWarning(message) {
                 const warningDiv = document.getElementById('configWarning');
                 if (warningDiv) {
@@ -717,19 +701,16 @@
             init(userId) {
                 FirebaseService.getTasksSnapshot(this.onTasksUpdated.bind(this));
             },
-
             onTasksUpdated(tasks) {
                 this.tasks = tasks;
-                this.checkOverdueTasks(false); // Check without saving, as snapshot is source of truth
+                this.checkOverdueTasks(false);
                 this.render();
             },
-
             addTask(event) {
                 event.preventDefault();
                 const title = document.getElementById('taskTitle').value.trim();
                 const dueDateValue = document.getElementById('taskDueDate').value;
                 if (!title) return;
-                
                 const task = {
                     title,
                     timeBox: parseInt(document.getElementById('taskTime').value) || 25,
@@ -741,30 +722,23 @@
                     notes: '',
                     remainingTime: null
                 };
-                
                 FirebaseService.addTask(task);
                 UI.showNotification("Task added!", "success");
                 event.target.reset();
                 UI.closeModal('addTaskModal');
             },
-            
             updateTask(task) {
                 const { id, ...taskData } = task;
                 FirebaseService.updateTask(id, taskData);
             },
-
             editTask(taskId, evt = null) {
                 if (evt) evt.stopPropagation();
                 this.editingTaskId = taskId;
                 this.render();
                 if (taskId === null) { return; }
                 const input = document.querySelector(`.task-title-input[data-task-id='${taskId}']`);
-                if (input) {
-                    input.focus();
-                    input.select();
-                }
+                if (input) { input.focus(); input.select(); }
             },
-            
             saveTaskTitle(taskId, newTitle) {
                 const task = this.tasks.find(t => t.id === taskId);
                 if (task && newTitle.trim()) {
@@ -773,7 +747,6 @@
                 }
                 this.editingTaskId = null;
             },
-            
             confirmDelete() {
                 if (UI.taskToDeleteId) {
                     FirebaseService.deleteTask(UI.taskToDeleteId);
@@ -781,39 +754,27 @@
                 }
                 UI.closeDeleteModal();
             },
-
             toggleComplete(taskId, evt = null) {
                 if (evt) evt.stopPropagation();
                 const task = this.tasks.find(t => t.id == taskId);
-                if(task) { 
-                    task.completed = !task.completed; 
-                    this.updateTask(task); 
-                }
+                if(task) { task.completed = !task.completed; this.updateTask(task); }
             },
-            
             addSubtask(text, fromAI = false) {
                 const taskId = UI.currentDetailTaskId;
                 const task = this.tasks.find(t => t.id === taskId);
                 let subtaskText = text;
-                
                 if (!fromAI) {
                     const input = document.getElementById('newSubtaskInput');
                     subtaskText = input.value.trim();
                 }
                 if (!task || !subtaskText) return;
                 if (!task.subtasks) task.subtasks = [];
-                
                 const subtaskId = task.subtasks.length > 0 ? Math.max(...task.subtasks.map(s => s.id)) + 1 : 1;
                 task.subtasks.push({ id: subtaskId, text: subtaskText, completed: false });
-                
-                if (!fromAI) {
-                    document.getElementById('newSubtaskInput').value = '';
-                }
-                
+                if (!fromAI) { document.getElementById('newSubtaskInput').value = ''; }
                 this.updateTask(task); 
-                UI.openDetailsModal(taskId, null); // Re-open to refresh
+                UI.openDetailsModal(taskId, null);
             },
-            
             toggleSubtask(subtaskId) {
                 const taskId = UI.currentDetailTaskId;
                 const task = this.tasks.find(t => t.id === taskId);
@@ -823,7 +784,6 @@
                 this.updateTask(task);
                 UI.openDetailsModal(taskId, null);
             },
-            
             deleteSubtask(subtaskId) {
                 const taskId = UI.currentDetailTaskId;
                 const task = this.tasks.find(t => t.id === taskId);
@@ -832,16 +792,11 @@
                 this.updateTask(task);
                 UI.openDetailsModal(taskId, null);
             },
-            
             updateNotes(notes) {
                 const taskId = UI.currentDetailTaskId;
                 const task = this.tasks.find(t => t.id === taskId);
-                if (task) { 
-                    task.notes = notes; 
-                    this.updateTask(task); 
-                }
+                if (task) { task.notes = notes; this.updateTask(task); }
             },
-            
             saveDetails() {
                 const taskId = UI.currentDetailTaskId;
                 const task = this.tasks.find(t => t.id === taskId);
@@ -853,41 +808,27 @@
                 const dueDateInput = document.getElementById('detailDueDateInput');
                 const completedCheckbox = document.getElementById('detailCompletedCheckbox');
 
-                if (titleInput && titleInput.value.trim()) {
-                    task.title = titleInput.value.trim();
-                }
+                if (titleInput && titleInput.value.trim()) { task.title = titleInput.value.trim(); }
                 task.quadrant = parseInt(quadrantSelect.value, 10);
-                
                 const newTimeBox = parseInt(timeInput.value, 10) || 25;
-                if (task.timeBox !== newTimeBox) {
-                    task.remainingTime = null; // Reset timer if duration changes
-                }
+                if (task.timeBox !== newTimeBox) { task.remainingTime = null; }
                 task.timeBox = newTimeBox;
-
                 const dueDateValue = dueDateInput.value;
                 task.dueDate = dueDateValue ? new Date(dueDateValue + 'T00:00:00').toISOString() : null;
                 task.completed = completedCheckbox.checked;
-
                 this.updateTask(task); 
                 UI.showNotification('Task details updated.', 'success');
             },
-            
             moveTask(taskId, newQuadrant) { 
                 const task = this.tasks.find(t => t.id == taskId); 
-                if (task) { 
-                    task.quadrant = newQuadrant; 
-                    this.updateTask(task); 
-                } 
+                if (task) { task.quadrant = newQuadrant; this.updateTask(task); } 
             },
-
             dragStart(event, taskId) { 
                 event.stopPropagation(); 
                 event.dataTransfer.setData('text/plain', taskId);
                 event.currentTarget.classList.add('dragging');
             },
-            dragEnd(event) {
-                event.currentTarget.classList.remove('dragging');
-            },
+            dragEnd(event) { event.currentTarget.classList.remove('dragging'); },
             allowDrop(event) { event.preventDefault(); event.currentTarget.classList.add('drag-over'); },
             dragLeave(event) { event.currentTarget.classList.remove('drag-over'); },
             drop(event) {
@@ -897,7 +838,6 @@
                 const newQuadrant = parseInt(event.currentTarget.dataset.quadrant);
                 this.moveTask(taskId, newQuadrant);
             },
-            
             checkOverdueTasks(save = true) {
                 const now = new Date();
                 let changed = false;
@@ -914,14 +854,11 @@
                     UI.showNotification("Overdue tasks were moved to 'Urgent & Important'.", "info");
                 }
             },
-            
             render() {
                 if (Timer.isRunning) return; 
-                
                 for (let i = 1; i <= 4; i++) {
                     const container = document.getElementById(`tasks-${i}`);
                     let quadrantTasks = this.tasks.filter(t => t.quadrant == i);
-                    
                     document.getElementById(`count-${i}`).textContent = quadrantTasks.length;
                     
                     if (quadrantTasks.length === 0) { 
@@ -934,9 +871,7 @@
                         const isOverdue = task.dueDate && !task.completed && new Date(task.dueDate) < new Date();
                         
                         const titleDisplay = this.editingTaskId === task.id
-                            ? `<input type="text" class="task-title-input" data-task-id="${task.id}" value="${task.title}"
-                                      onblur="TaskManager.saveTaskTitle('${task.id}', this.value)"
-                                      onkeydown="if(event.key === 'Enter') this.blur(); if(event.key === 'Escape') TaskManager.editTask(null, event)">`
+                            ? `<input type="text" class="task-title-input" data-task-id="${task.id}" value="${task.title}">`
                             : `<p class="font-semibold text-gray-800 truncate task-title-text" data-action="edit-title">${task.title}</p>`;
                         
                         let timeDisplay = `${task.timeBox}m`;
@@ -950,7 +885,7 @@
                             <div class="flex-1 min-w-0 task-title cursor-pointer" data-action="open-details">
                                ${titleDisplay}
                                <div class="flex items-center gap-3 mt-1 text-xs text-gray-500 task-meta">
-                                    ${task.dueDate ? `<span>📅 ${new Date(task.dueDate).toLocaleDateString()}</span>` : ''}
+                                    ${task.dueDate ? `<span>📅 ${new Date(task.dueDate).toLocaleString()}</span>` : ''}
                                     <span>⏱️ ${timeDisplay}</span>
                                </div>
                             </div>
@@ -971,23 +906,15 @@
                 console.log("App initializing...");
                 GeminiService.init();
                 FirebaseService.init(this.onAuthReady);
-                
-                // Bind listeners
-                this.bindDirectListeners();    // For static elements by ID
-                this.bindDelegatedListeners(); // For dynamic/delegated actions
+                this.bindDirectListeners();
+                this.bindDelegatedListeners();
             },
-
             onAuthReady(userId) {
                 console.log("Auth is ready. User:", userId);
                 TaskManager.init(userId);
             },
-            
-            // Listeners for static, unique elements bound by ID
             bindDirectListeners() {
-                // FIXED: Removed button listeners from here
-                
                 document.getElementById('addTaskForm').addEventListener('submit', (e) => TaskManager.addTask(e));
-                
                 document.getElementById('timer-fullscreen-pause').addEventListener('click', () => Timer.pause());
                 document.getElementById('timer-fullscreen-start').addEventListener('click', () => Timer.start());
                 document.getElementById('timer-fullscreen-stop').addEventListener('click', () => Timer.stop());
@@ -1004,8 +931,6 @@
                     }
                 });
             },
-
-            // Listeners for dynamic content (tasks) and modals, using event delegation
             bindDelegatedListeners() {
                 document.body.addEventListener('click', (e) => {
                     const actionTarget = e.target.closest('[data-action]');
@@ -1016,33 +941,22 @@
                     const taskId = taskTarget?.dataset.taskId;
 
                     switch (action) {
-                        // FIXED: Added static button actions here
-                        case 'open-settings': UI.openSettingsModal(); break;
+                        case 'open-settings': UI.openModal('settingsModal'); break;
                         case 'open-add-modal': UI.openModal('addTaskModal'); break;
-
-                        // Task Actions
                         case 'open-details': UI.openDetailsModal(taskId, e); break;
                         case 'edit-title': TaskManager.editTask(taskId, e); break;
                         case 'start-timer': Timer.startFromTask(taskId, e); break;
                         case 'toggle-complete': TaskManager.toggleComplete(taskId, e); break;
                         case 'open-delete-modal': UI.openDeleteModal(taskId, e); break;
-                        
-                        // Modal Actions
                         case 'close-modal': UI.closeModal(e.target.closest('.modal').id); break;
                         case 'save-api-key': GeminiService.saveApiKey(); break;
                         case 'confirm-delete': TaskManager.confirmDelete(); break;
-                        
-                        // Details Modal Actions
                         case 'save-details': TaskManager.saveDetails(); break;
                         case 'gen-subtasks': GeminiService.generateSubtasks(); break;
                         case 'gen-notes': GeminiService.generateNotes(); break;
                         case 'add-subtask': TaskManager.addSubtask(null, false); break;
-                        case 'toggle-subtask': 
-                            TaskManager.toggleSubtask(Number(actionTarget.dataset.subtaskId)); 
-                            break;
-                        case 'delete-subtask': 
-                            TaskManager.deleteSubtask(Number(actionTarget.dataset.subtaskId)); 
-                            break;
+                        case 'toggle-subtask': TaskManager.toggleSubtask(Number(actionTarget.dataset.subtaskId)); break;
+                        case 'delete-subtask': TaskManager.deleteSubtask(Number(actionTarget.dataset.subtaskId)); break;
                     }
                 });
                 
@@ -1068,16 +982,12 @@
                     }
                 });
                 document.body.addEventListener('dragend', (e) => {
-                     if (e.target.classList.contains('task')) {
-                         TaskManager.dragEnd(e);
-                     }
+                     if (e.target.classList.contains('task')) { TaskManager.dragEnd(e); }
                 });
             }
         };
         
-        // --- GLOBAL INITIALIZATION --- //
         document.addEventListener('DOMContentLoaded', () => App.init());
-        
     </script>
 </body>
 </html>
