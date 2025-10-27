@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale-1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Eisenhower Matrix - AI Task Manager</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -286,16 +286,7 @@
         // };
         //
         // ⬇️ PASTE YOUR CONFIG OBJECT HERE ⬇️
-        const USER_PROVIDED_FIREBASE_CONFIG =
-const firebaseConfig = {
-  apiKey: "AIzaSyCkykWc8jK3CONSL0TddJj3J8fFYie17lE",
-  authDomain: "task-1c051.firebaseapp.com",
-  projectId: "task-1c051",
-  storageBucket: "task-1c051.firebasestorage.app",
-  messagingSenderId: "574407276539",
-  appId: "1:574407276539:web:f524f9e663421c6255bd5e",
-  measurementId: "G-KDR87DQGVQ"
-};
+        const USER_PROVIDED_FIREBASE_CONFIG = null; 
         
         // --- GEMINI API KEY (Can be set in UI) --- //
         let GEMINI_API_KEY = "";
@@ -312,26 +303,21 @@ const firebaseConfig = {
             async init(onAuthReady) {
                 // setLogLevel('debug');
                 
-                // --- MODIFIED LOGIC --- //
-                // 1. Check for user-provided config first
                 let firebaseConfig;
                 if (USER_PROVIDED_FIREBASE_CONFIG) {
                     firebaseConfig = USER_PROVIDED_FIREBASE_CONFIG;
                     console.log("Using user-provided Firebase config.");
                 } 
-                // 2. If not, check for environment config
                 else if (typeof __firebase_config !== 'undefined' && __firebase_config) {
                     firebaseConfig = JSON.parse(__firebase_config);
                     console.log("Using environment-provided Firebase config.");
                 } 
-                // 3. If neither, show error
                 else {
                     console.error("Firebase config is missing.");
                     UI.showConfigWarning("<strong>Critical Error:</strong> Firebase configuration is missing. Add your `firebaseConfig` object to the script to fix this.");
                     document.getElementById('auth-overlay')?.classList.add('hidden');
                     return;
                 }
-                // --- END MODIFIED LOGIC --- //
 
                 this.appId = typeof __app_id !== 'undefined' ? __app_id : (firebaseConfig.projectId || 'default-app-id');
 
@@ -350,7 +336,6 @@ const firebaseConfig = {
                                 authSection.innerHTML = `<span class="px-3 py-1 text-xs font-medium text-gray-600 bg-gray-200 rounded-full">${this.userId}</span>`;
                             }
                             
-                            // Use a consistent collection path
                             const collectionPath = `artifacts/${this.appId}/users/${this.userId}/tasks`;
                             this.tasksCollectionRef = collection(this.db, collectionPath);
                             
@@ -360,23 +345,30 @@ const firebaseConfig = {
                             this.userId = null;
                             if (this.tasksUnsubscribe) this.tasksUnsubscribe();
                         }
-                        // Only hide overlay AFTER first auth state change
+                        // Hide overlay *after* first auth state change
                         document.getElementById('auth-overlay')?.classList.add('hidden');
                     });
 
-                    // Sign in (Try environment token first, fallback to anonymous)
+                    // --- ROBUST SIGN-IN LOGIC --- //
                     if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                         await signInWithCustomToken(this.auth, __initial_auth_token);
                     } else {
-                        // This is the flow that will run for self-hosting
                         console.log("No custom token found, signing in anonymously.");
                         await signInAnonymously(this.auth);
                     }
+                    // --- END ROBUST SIGN-IN LOGIC --- //
                     
                 } catch (error) {
-                    console.error("Firebase initialization error:", error);
-                    UI.showConfigWarning(`<strong>Firebase Error:</strong> ${error.message}. <br>Did you enable Anonymous Sign-In in the Firebase console?`);
+                    // --- !! NEW CATCH BLOCK !! --- //
+                    // This block catches errors during init or sign-in
+                    console.error("Firebase initialization or sign-in error:", error);
+                    let errorMsg = `<strong>Firebase Error:</strong> ${error.message}.`;
+                    if (error.code === 'auth/operation-not-allowed') {
+                        errorMsg += "<br>Did you enable Anonymous Sign-In in the Firebase console?";
+                    }
+                    UI.showConfigWarning(errorMsg);
                     document.getElementById('auth-overlay')?.classList.add('hidden');
+                    // --- !! END NEW CATCH BLOCK !! --- //
                 }
             },
 
@@ -885,7 +877,7 @@ const firebaseConfig = {
                             <div class="flex-1 min-w-0 task-title cursor-pointer" data-action="open-details">
                                ${titleDisplay}
                                <div class="flex items-center gap-3 mt-1 text-xs text-gray-500 task-meta">
-                                    ${task.dueDate ? `<span>📅 ${new Date(task.dueDate).toLocaleString()}</span>` : ''}
+                                    ${task.dueDate ? `<span>📅 ${new Date(task.dueDate).toLocaleDateString()}</span>` : ''}
                                     <span>⏱️ ${timeDisplay}</span>
                                </div>
                             </div>
@@ -956,7 +948,7 @@ const firebaseConfig = {
                         case 'gen-notes': GeminiService.generateNotes(); break;
                         case 'add-subtask': TaskManager.addSubtask(null, false); break;
                         case 'toggle-subtask': TaskManager.toggleSubtask(Number(actionTarget.dataset.subtaskId)); break;
-                        case 'delete-subtask': TaskManager.deleteSubtask(Number(actionTarget.dataset.subtaskId)); break;
+                        case 'delete-subtask': TaskManager.deleteSubtask(Number(actionBtarget.dataset.subtaskId)); break;
                     }
                 });
                 
