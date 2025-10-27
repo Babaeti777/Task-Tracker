@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale-1.0, user-scalable=no">
     <title>Eisenhower Matrix - AI Task Manager</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -56,7 +56,7 @@
     <div id="configWarning" class="hidden fixed top-0 left-0 right-0 z-[101] px-4 py-3 text-sm font-medium text-center text-red-800 bg-red-100 border-b-2 border-red-200"></div>
     <div id="auth-overlay" class="fixed inset-0 z-[99] flex flex-col items-center justify-center gap-4 bg-gray-100/90 backdrop-blur-sm">
         <div class="w-12 h-12 border-4 border-blue-500 rounded-full border-t-transparent animate-spin"></div>
-        <p class="text-lg font-semibold text-gray-700">Connecting to database...</p>
+        <p class="text-lg font-semibold text-gray-700">Initializing...</p>
     </div>
 
     <header class="fixed top-0 left-0 right-0 z-40 flex items-center justify-between h-16 px-4 bg-white shadow-md sm:px-6 lg:px-8">
@@ -66,8 +66,8 @@
                 <span>⚙️</span>
                 <span class="hidden sm:inline">AI Settings</span>
             </button>
-            <div id="authSection" class="min-h-[30px]">
-                <span class="px-3 py-1 text-xs font-medium text-gray-600 bg-gray-200 rounded-full">Connecting...</span>
+            <div id="authSection" class="min-h-[40px]">
+                <!-- This will be filled by JavaScript -->
             </div>
         </div>
     </header>
@@ -264,37 +264,24 @@
     <script type="module">
         // Import Firebase modules
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        // --- NEW AUTH IMPORTS ---
+        import { 
+            getAuth, 
+            onAuthStateChanged,
+            GoogleAuthProvider,
+            signInWithPopup,
+            signOut
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        // --- END NEW AUTH IMPORTS ---
         import { 
             getFirestore, doc, addDoc, setDoc, updateDoc, deleteDoc, 
             onSnapshot, collection, query, setLogLevel 
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- PASTE YOUR FIREBASE CONFIG HERE --- //
-        // 
-        // 1. Create a Firebase project at console.firebase.google.com
-        // 2. Create a "Web App" (</>) and copy the config object.
-        // 3. Paste it here, replacing `null`.
-        //
-        // const firebaseConfig = {
-        //   apiKey: "...",
-        //   authDomain: "...",
-        //   projectId: "...",
-        //   storageBucket: "...",
-        //   messagingSenderId: "...",
-        //   appId: "..."
-        // };
-        //
+        // (Copied from your Firebase project's "Web App" settings)
         // ⬇️ PASTE YOUR CONFIG OBJECT HERE ⬇️
-        const USER_PROVIDED_FIREBASE_CONFIG =  {
-  apiKey: "AIzaSyCkykWc8jK3CONSL0TddJj3J8fFYie17lE",
-  authDomain: "task-1c051.firebaseapp.com",
-  projectId: "task-1c051",
-  storageBucket: "task-1c051.firebasestorage.app",
-  messagingSenderId: "574407276539",
-  appId: "1:574407276539:web:f524f9e663421c6255bd5e",
-  measurementId: "G-KDR87DQGVQ"
-}; 
+        const USER_PROVIDED_FIREBASE_CONFIG = null; 
         
         // --- GEMINI API KEY (Can be set in UI) --- //
         let GEMINI_API_KEY = "";
@@ -308,7 +295,7 @@
             tasksCollectionRef: null,
             tasksUnsubscribe: null,
 
-            async init(onAuthReady) {
+            async init(onAuthReady, onSignedOut) {
                 // setLogLevel('debug');
                 
                 let firebaseConfig;
@@ -334,49 +321,77 @@
                     this.db = getFirestore(app);
                     this.auth = getAuth(app);
 
-                    onAuthStateChanged(this.auth, async (user) => {
+                    // --- UPDATED AUTH LOGIC ---
+                    onAuthStateChanged(this.auth, (user) => {
                         if (user) {
+                            // User is signed in
                             this.userId = user.uid;
-                            console.log("User authenticated with UID:", this.userId);
-                            
+                            console.log("User signed in:", user.displayName, user.uid);
                             const authSection = document.getElementById('authSection');
                             if (authSection) {
-                                authSection.innerHTML = `<span class="px-3 py-1 text-xs font-medium text-gray-600 bg-gray-200 rounded-full">${this.userId}</span>`;
+                                // Show user info and Sign Out button
+                                authSection.innerHTML = `
+                                    <div class="flex items-center gap-3">
+                                        <img src="${user.photoURL}" alt="User" class="w-8 h-8 rounded-full">
+                                        <span class="text-sm font-medium text-gray-700 hidden sm:inline">${user.displayName || user.email}</span>
+                                        <button data-action="sign-out" class="px-3 py-1 text-sm font-semibold text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300">Sign Out</button>
+                                    </div>`;
                             }
                             
                             const collectionPath = `artifacts/${this.appId}/users/${this.userId}/tasks`;
                             this.tasksCollectionRef = collection(this.db, collectionPath);
                             
+                            // Trigger task loading
                             onAuthReady(this.userId);
                             
                         } else {
+                            // User is signed out
                             this.userId = null;
                             if (this.tasksUnsubscribe) this.tasksUnsubscribe();
+                            this.tasksCollectionRef = null;
+                            console.log("User is signed out.");
+                            const authSection = document.getElementById('authSection');
+                            if (authSection) {
+                                // Show Sign In button
+                                authSection.innerHTML = `<button data-action="sign-in-google" class="px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg shadow hover:bg-blue-700">
+                                    Sign In with Google
+                                    </button>`;
+                            }
+                            // Trigger clearing the UI
+                            onSignedOut();
                         }
-                        // Hide overlay *after* first auth state change
+                        // Hide overlay after first auth check, regardless of state
                         document.getElementById('auth-overlay')?.classList.add('hidden');
                     });
-
-                    // --- ROBUST SIGN-IN LOGIC --- //
-                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                        await signInWithCustomToken(this.auth, __initial_auth_token);
-                    } else {
-                        console.log("No custom token found, signing in anonymously.");
-                        await signInAnonymously(this.auth);
-                    }
-                    // --- END ROBUST SIGN-IN LOGIC --- //
+                    // --- END UPDATED AUTH LOGIC ---
                     
                 } catch (error) {
-                    // --- !! NEW CATCH BLOCK !! --- //
-                    // This block catches errors during init or sign-in
-                    console.error("Firebase initialization or sign-in error:", error);
+                    console.error("Firebase initialization error:", error);
                     let errorMsg = `<strong>Firebase Error:</strong> ${error.message}.`;
-                    if (error.code === 'auth/operation-not-allowed') {
-                        errorMsg += "<br>Did you enable Anonymous Sign-In in the Firebase console?";
-                    }
                     UI.showConfigWarning(errorMsg);
                     document.getElementById('auth-overlay')?.classList.add('hidden');
-                    // --- !! END NEW CATCH BLOCK !! --- //
+                }
+            },
+
+            // --- NEW: Sign In with Google ---
+            async signInWithGoogle() {
+                const provider = new GoogleAuthProvider();
+                try {
+                    await signInWithPopup(this.auth, provider);
+                    // onAuthStateChanged will handle the successful login
+                } catch (error) {
+                    console.error("Error signing in with Google:", error);
+                    UI.showNotification(`Sign-in failed: ${error.message}`, "error");
+                }
+            },
+
+            // --- NEW: Sign Out ---
+            async signOut() {
+                try {
+                    await signOut(this.auth);
+                    // onAuthStateChanged will handle the successful sign-out
+                } catch (error) {
+                    console.error("Error signing out:", error);
                 }
             },
 
@@ -399,7 +414,10 @@
             },
 
             async addTask(task) {
-                if (!this.tasksCollectionRef) return;
+                if (!this.tasksCollectionRef) {
+                    UI.showNotification("You must be signed in to add tasks.", "error");
+                    return;
+                }
                 try {
                     await addDoc(this.tasksCollectionRef, task);
                 } catch (error) {
@@ -467,6 +485,10 @@
             },
 
             async call(prompt) {
+                if (!FirebaseService.userId) {
+                    UI.showNotification("You must be signed in to use AI features.", "error");
+                    return null;
+                }
                 if (!GEMINI_API_KEY) {
                     UI.showNotification("Gemini API Key is not set. Please add it in Settings.", "error");
                     UI.openModal('settingsModal');
@@ -524,7 +546,7 @@
                 if (result) {
                     const notesArea = document.getElementById('taskNotes');
                     notesArea.value = result;
-                    TaskManager.updateNotes(result); // This will save to DB
+                    TaskManager.updateNotes(result);
                 }
                 this.setLoadingState('generateNotesBtn', false);
             }
@@ -536,6 +558,10 @@
             
             startFromTask(taskId, evt = null) {
                 if (evt) evt.stopPropagation();
+                if (!FirebaseService.userId) {
+                    UI.showNotification("You must be signed in to use the timer.", "error");
+                    return;
+                }
                 const task = TaskManager.tasks.find(t => t.id === taskId);
                 if (!task) return;
                 
@@ -614,6 +640,10 @@
             taskToDeleteId: null,
 
             openModal(modalId) {
+                if (!FirebaseService.userId && modalId !== 'settingsModal') {
+                    UI.showNotification("Please sign in to manage your tasks.", "error");
+                    return;
+                }
                 const modal = document.getElementById(modalId);
                 if (!modal) { console.error("Modal not found:", modalId); return; }
                 modal.classList.remove('opacity-0', 'pointer-events-none');
@@ -628,6 +658,10 @@
             },
             openDetailsModal(taskId, evt = null) {
                 if (evt) evt.stopPropagation();
+                if (!FirebaseService.userId) {
+                    UI.showNotification("Please sign in to view details.", "error");
+                    return;
+                }
                 this.currentDetailTaskId = taskId;
                 const task = TaskManager.tasks.find(t => t.id === taskId);
                 if (!task) return;
@@ -661,6 +695,10 @@
             },
             openDeleteModal(taskId, evt = null) {
                 if (evt) evt.stopPropagation();
+                if (!FirebaseService.userId) {
+                    UI.showNotification("Please sign in to delete tasks.", "error");
+                    return;
+                }
                 this.taskToDeleteId = taskId;
                 this.openModal('deleteModal');
             },
@@ -670,7 +708,11 @@
             },
             openSettingsModal() {
                 document.getElementById('geminiApiKeyInput').value = GEMINI_API_KEY;
-                this.openModal('settingsModal');
+                // Settings modal is the only one accessible when logged out
+                const modal = document.getElementById('settingsModal');
+                if (!modal) { console.error("Modal not found: settingsModal"); return; }
+                modal.classList.remove('opacity-0', 'pointer-events-none');
+                modal.querySelector('.modal-content').classList.remove('scale-95');
             },
             showNotification(message, type = 'info') {
                  const container = document.getElementById('toast-container');
@@ -699,11 +741,17 @@
             editingTaskId: null,
 
             init(userId) {
+                // Now called by onAuthReady
                 FirebaseService.getTasksSnapshot(this.onTasksUpdated.bind(this));
             },
             onTasksUpdated(tasks) {
                 this.tasks = tasks;
                 this.checkOverdueTasks(false);
+                this.render();
+            },
+            // --- NEW: Clear tasks on sign-out ---
+            clearTasks() {
+                this.tasks = [];
                 this.render();
             },
             addTask(event) {
@@ -824,14 +872,20 @@
                 if (task) { task.quadrant = newQuadrant; this.updateTask(task); } 
             },
             dragStart(event, taskId) { 
+                if (!FirebaseService.userId) { event.preventDefault(); return; }
                 event.stopPropagation(); 
                 event.dataTransfer.setData('text/plain', taskId);
                 event.currentTarget.classList.add('dragging');
             },
             dragEnd(event) { event.currentTarget.classList.remove('dragging'); },
-            allowDrop(event) { event.preventDefault(); event.currentTarget.classList.add('drag-over'); },
+            allowDrop(event) { 
+                if (!FirebaseService.userId) return;
+                event.preventDefault(); 
+                event.currentTarget.classList.add('drag-over'); 
+            },
             dragLeave(event) { event.currentTarget.classList.remove('drag-over'); },
             drop(event) {
+                if (!FirebaseService.userId) return;
                 event.preventDefault(); 
                 event.currentTarget.classList.remove('drag-over');
                 const taskId = event.dataTransfer.getData('text/plain');
@@ -856,6 +910,16 @@
             },
             render() {
                 if (Timer.isRunning) return; 
+                
+                // Show a message if logged out
+                if (!FirebaseService.userId) {
+                    for (let i = 1; i <= 4; i++) {
+                        document.getElementById(`count-${i}`).textContent = 0;
+                        document.getElementById(`tasks-${i}`).innerHTML = `<div class="p-4 text-center text-gray-500">Please sign in to see your tasks.</div>`;
+                    }
+                    return;
+                }
+                
                 for (let i = 1; i <= 4; i++) {
                     const container = document.getElementById(`tasks-${i}`);
                     let quadrantTasks = this.tasks.filter(t => t.quadrant == i);
@@ -905,7 +969,12 @@
             init() {
                 console.log("App initializing...");
                 GeminiService.init();
-                FirebaseService.init(this.onAuthReady);
+                // --- UPDATED INIT CALL ---
+                FirebaseService.init(
+                    this.onAuthReady, // Function to run on sign-in
+                    this.onSignedOut  // Function to run on sign-out
+                );
+                // --- END UPDATED INIT CALL ---
                 this.bindDirectListeners();
                 this.bindDelegatedListeners();
             },
@@ -913,6 +982,12 @@
                 console.log("Auth is ready. User:", userId);
                 TaskManager.init(userId);
             },
+            // --- NEW: Handle sign-out ---
+            onSignedOut() {
+                console.log("Auth state signed out. Clearing tasks.");
+                TaskManager.clearTasks();
+            },
+            // --- END NEW ---
             bindDirectListeners() {
                 document.getElementById('addTaskForm').addEventListener('submit', (e) => TaskManager.addTask(e));
                 document.getElementById('timer-fullscreen-pause').addEventListener('click', () => Timer.pause());
@@ -941,7 +1016,12 @@
                     const taskId = taskTarget?.dataset.taskId;
 
                     switch (action) {
-                        case 'open-settings': UI.openModal('settingsModal'); break;
+                        // --- NEW AUTH ACTIONS ---
+                        case 'sign-in-google': FirebaseService.signInWithGoogle(); break;
+                        case 'sign-out': FirebaseService.signOut(); break;
+                        // --- END NEW AUTH ACTIONS ---
+
+                        case 'open-settings': UI.openSettingsModal(); break;
                         case 'open-add-modal': UI.openModal('addTaskModal'); break;
                         case 'open-details': UI.openDetailsModal(taskId, e); break;
                         case 'edit-title': TaskManager.editTask(taskId, e); break;
@@ -956,7 +1036,7 @@
                         case 'gen-notes': GeminiService.generateNotes(); break;
                         case 'add-subtask': TaskManager.addSubtask(null, false); break;
                         case 'toggle-subtask': TaskManager.toggleSubtask(Number(actionTarget.dataset.subtaskId)); break;
-                        case 'delete-subtask': TaskManager.deleteSubtask(Number(actionBtarget.dataset.subtaskId)); break;
+                        case 'delete-subtask': TaskManager.deleteSubtask(Number(actionTarget.dataset.subtaskId)); break;
                     }
                 });
                 
@@ -991,4 +1071,5 @@
     </script>
 </body>
 </html>
+
 
