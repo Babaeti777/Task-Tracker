@@ -902,18 +902,38 @@
             },
             checkOverdueTasks(save = true) {
                 const now = new Date();
-                let changed = false;
-                this.tasks.forEach(task => { 
-                    if (task.dueDate && !task.completed) { 
-                        if (new Date(task.dueDate) < now && task.quadrant !== 1) { 
-                            task.quadrant = 1; 
-                            if(save) this.updateTask(task);
-                            changed = true;
-                        } 
-                    } 
+                const soonThreshold = new Date(now.getTime() + (2 * 24 * 60 * 60 * 1000));
+                let movedToUrgentImportant = false;
+                let movedToImportant = false;
+
+                this.tasks.forEach(task => {
+                    if (!task.dueDate || task.completed) { return; }
+
+                    const dueDate = new Date(task.dueDate);
+
+                    if (dueDate < now) {
+                        if (task.quadrant !== 1) {
+                            task.quadrant = 1;
+                            if (save) { this.updateTask(task); }
+                            movedToUrgentImportant = true;
+                        }
+                        return;
+                    }
+
+                    if (dueDate <= soonThreshold && task.quadrant !== 1 && task.quadrant !== 2) {
+                        task.quadrant = 2;
+                        if (save) { this.updateTask(task); }
+                        movedToImportant = true;
+                    }
                 });
-                if (changed && save) {
-                    UI.showNotification("Overdue tasks were moved to 'Urgent & Important'.", "info");
+
+                if (save) {
+                    if (movedToImportant) {
+                        UI.showNotification("Tasks due within two days were moved to 'Important'.", "info");
+                    }
+                    if (movedToUrgentImportant) {
+                        UI.showNotification("Overdue tasks were moved to 'Urgent & Important'.", "info");
+                    }
                 }
             },
             render() {
