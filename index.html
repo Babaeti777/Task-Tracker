@@ -950,7 +950,25 @@
                 
                 for (let i = 1; i <= 4; i++) {
                     const container = document.getElementById(`tasks-${i}`);
-                    let quadrantTasks = this.tasks.filter(t => t.quadrant == i);
+                    let quadrantTasks = this.tasks
+                        .filter(t => t.quadrant == i)
+                        .slice()
+                        .sort((a, b) => {
+                            const hasDueA = !!a.dueDate;
+                            const hasDueB = !!b.dueDate;
+
+                            if (hasDueA && hasDueB) {
+                                const diff = new Date(a.dueDate) - new Date(b.dueDate);
+                                if (diff !== 0) { return diff; }
+                            } else if (hasDueA || hasDueB) {
+                                return hasDueA ? -1 : 1;
+                            }
+
+                            const durationDiff = (b.timeBox || 0) - (a.timeBox || 0);
+                            if (durationDiff !== 0) { return durationDiff; }
+
+                            return new Date(a.createdAt || 0) - new Date(b.createdAt || 0);
+                        });
                     document.getElementById(`count-${i}`).textContent = quadrantTasks.length;
                     
                     if (quadrantTasks.length === 0) { 
