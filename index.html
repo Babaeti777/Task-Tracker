@@ -62,6 +62,11 @@
     <header class="fixed top-0 left-0 right-0 z-40 flex items-center justify-between h-16 px-4 bg-white shadow-md sm:px-6 lg:px-8">
         <h1 class="text-2xl font-bold tracking-tight text-gray-800">Eisenhower</h1>
         <div class="flex items-center gap-4">
+            <button id="completedToggleBtn" data-action="toggle-completed-panel" class="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-gray-700 transition bg-gray-200 rounded-lg hover:bg-gray-300">
+                <span>🗃️</span>
+                <span class="hidden sm:inline">Completed</span>
+                <span id="completedCountBadge" class="hidden px-2 py-0.5 text-xs font-bold text-white bg-blue-600 rounded-full">0</span>
+            </button>
             <button id="openSettingsBtn" data-action="open-settings" class="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-gray-700 transition bg-gray-200 rounded-lg hover:bg-gray-300">
                 <span>⚙️</span>
                 <span class="hidden sm:inline">AI Settings</span>
@@ -259,6 +264,22 @@
         </div>
     </div>
     
+    <div id="completedOverlay" class="fixed inset-0 z-50 flex justify-end bg-black/30 opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="flex-1" data-action="close-completed-panel"></div>
+        <aside id="completedPanel" class="relative flex flex-col w-full max-w-md h-full bg-white shadow-2xl transform translate-x-full transition-transform duration-300">
+            <div class="flex items-center justify-between px-5 py-4 border-b border-gray-200">
+                <div class="flex items-center gap-2 text-lg font-semibold text-gray-800">
+                    <span>🗃️</span>
+                    <span>Completed Tasks</span>
+                </div>
+                <button data-action="close-completed-panel" class="p-1 text-gray-400 rounded-full hover:bg-gray-200 hover:text-gray-600">✖️</button>
+            </div>
+            <div class="flex-1 overflow-y-auto">
+                <div id="completedTasksList" class="p-4 space-y-3"></div>
+            </div>
+        </aside>
+    </div>
+
     <div id="toast-container"></div>
     
     <script type="module">
@@ -664,6 +685,37 @@
                 modal.querySelector('.modal-content').classList.add('scale-95');
                 setTimeout(() => modal.classList.add('pointer-events-none'), 300);
             },
+            toggleCompletedPanel() {
+                const overlay = document.getElementById('completedOverlay');
+                if (!overlay) return;
+                if (overlay.classList.contains('pointer-events-none')) {
+                    this.openCompletedPanel();
+                } else {
+                    this.closeCompletedPanel();
+                }
+            },
+            openCompletedPanel() {
+                if (!FirebaseService.userId) {
+                    UI.showNotification("Please sign in to view completed tasks.", "error");
+                    return;
+                }
+                const overlay = document.getElementById('completedOverlay');
+                const panel = document.getElementById('completedPanel');
+                if (!overlay || !panel) return;
+                overlay.classList.remove('pointer-events-none');
+                requestAnimationFrame(() => {
+                    overlay.classList.remove('opacity-0');
+                    panel.classList.remove('translate-x-full');
+                });
+            },
+            closeCompletedPanel() {
+                const overlay = document.getElementById('completedOverlay');
+                const panel = document.getElementById('completedPanel');
+                if (!overlay || !panel) return;
+                panel.classList.add('translate-x-full');
+                overlay.classList.add('opacity-0');
+                setTimeout(() => overlay.classList.add('pointer-events-none'), 300);
+            },
             openDetailsModal(taskId, evt = null) {
                 if (evt) evt.stopPropagation();
                 if (!FirebaseService.userId) {
@@ -727,12 +779,52 @@
                  const toast = document.createElement('div');
                  let icon = 'ℹ️';
                  let typeClass = 'toast-info';
-                 if (type === 'success') { icon = '✅'; typeClass = 'toast-success'; } 
+                 if (type === 'success') { icon = '✅'; typeClass = 'toast-success'; }
                  else if (type === 'error') { icon = '❌'; typeClass = 'toast-error'; }
                  toast.className = `toast ${typeClass}`;
                  toast.innerHTML = `<span class="toast-icon">${icon}</span><span class="flex-1">${message}</span>`;
                  container.appendChild(toast);
                  setTimeout(() => { toast.remove(); }, 5000);
+            },
+            renderCompletedTasks(tasks) {
+                const container = document.getElementById('completedTasksList');
+                if (container) {
+                    if (!tasks || tasks.length === 0) {
+                        container.innerHTML = '<p class="p-4 text-sm text-center text-gray-500">No completed tasks yet.</p>';
+                    } else {
+                        const sorted = tasks.slice().sort((a, b) => {
+                            const dateA = new Date(a.completedAt || a.updatedAt || a.createdAt || 0);
+                            const dateB = new Date(b.completedAt || b.updatedAt || b.createdAt || 0);
+                            return dateB - dateA;
+                        });
+                        container.innerHTML = sorted.map(task => {
+                            const completedDate = task.completedAt ? new Date(task.completedAt).toLocaleString() : '';
+                            const dueDate = task.dueDate ? new Date(task.dueDate).toLocaleDateString() : '';
+                            return `
+                                <div class="border border-gray-200 rounded-lg shadow-sm">
+                                    <div class="flex items-start justify-between gap-3 p-3">
+                                        <div class="flex-1 min-w-0">
+                                            <p class="text-sm font-semibold text-gray-700 line-through">${task.title}</p>
+                                            <div class="flex flex-wrap gap-2 mt-2 text-xs text-gray-500">
+                                                ${dueDate ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-100 rounded-full">📅 ${dueDate}</span>` : ''}
+                                                ${completedDate ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 rounded-full">✅ ${completedDate}</span>` : ''}
+                                            </div>
+                                        </div>
+                                        <button data-action="reopen-task" data-task-id="${task.id}" class="px-3 py-1 text-xs font-semibold text-white transition bg-blue-600 rounded-full hover:bg-blue-700">↩️ Reopen</button>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('');
+                    }
+                }
+
+                const badge = document.getElementById('completedCountBadge');
+                if (badge) {
+                    const count = tasks?.length || 0;
+                    badge.textContent = count;
+                    if (count > 0) { badge.classList.remove('hidden'); }
+                    else { badge.classList.add('hidden'); }
+                }
             },
             showConfigWarning(message) {
                 const warningDiv = document.getElementById('configWarning');
@@ -760,6 +852,8 @@
             // --- NEW: Clear tasks on sign-out ---
             clearTasks() {
                 this.tasks = [];
+                UI.renderCompletedTasks([]);
+                UI.closeCompletedPanel();
                 this.render();
             },
             addTask(event) {
@@ -771,10 +865,11 @@
                     title,
                     timeBox: parseInt(document.getElementById('taskTime').value) || 25,
                     quadrant: parseInt(document.getElementById('taskQuadrant').value),
-                    completed: false, 
+                    completed: false,
+                    completedAt: null,
                     createdAt: new Date().toISOString(),
                     dueDate: dueDateValue ? new Date(dueDateValue + 'T00:00:00').toISOString() : null,
-                    subtasks: [], 
+                    subtasks: [],
                     notes: '',
                     remainingTime: null
                 };
@@ -813,7 +908,12 @@
             toggleComplete(taskId, evt = null) {
                 if (evt) evt.stopPropagation();
                 const task = this.tasks.find(t => t.id == taskId);
-                if(task) { task.completed = !task.completed; this.updateTask(task); }
+                if (task) {
+                    const newStatus = !task.completed;
+                    task.completed = newStatus;
+                    task.completedAt = newStatus ? new Date().toISOString() : null;
+                    this.updateTask(task);
+                }
             },
             addSubtask(text, fromAI = false) {
                 const taskId = UI.currentDetailTaskId;
@@ -863,6 +963,7 @@
                 const timeInput = document.getElementById('detailTimeInput');
                 const dueDateInput = document.getElementById('detailDueDateInput');
                 const completedCheckbox = document.getElementById('detailCompletedCheckbox');
+                const wasCompleted = task.completed;
 
                 if (titleInput && titleInput.value.trim()) { task.title = titleInput.value.trim(); }
                 task.quadrant = parseInt(quadrantSelect.value, 10);
@@ -872,7 +973,12 @@
                 const dueDateValue = dueDateInput.value;
                 task.dueDate = dueDateValue ? new Date(dueDateValue + 'T00:00:00').toISOString() : null;
                 task.completed = completedCheckbox.checked;
-                this.updateTask(task); 
+                if (task.completed && !wasCompleted) {
+                    task.completedAt = new Date().toISOString();
+                } else if (!task.completed) {
+                    task.completedAt = null;
+                }
+                this.updateTask(task);
                 UI.showNotification('Task details updated.', 'success');
             },
             moveTask(taskId, newQuadrant) { 
@@ -937,21 +1043,25 @@
                 }
             },
             render() {
-                if (Timer.isRunning) return; 
-                
+                if (Timer.isRunning) return;
+
                 // Show a message if logged out
                 if (!FirebaseService.userId) {
                     for (let i = 1; i <= 4; i++) {
                         document.getElementById(`count-${i}`).textContent = 0;
                         document.getElementById(`tasks-${i}`).innerHTML = `<div class="p-4 text-center text-gray-500">Please sign in to see your tasks.</div>`;
                     }
+                    UI.renderCompletedTasks([]);
+                    UI.closeCompletedPanel();
                     return;
                 }
-                
+
+                const completedTasks = this.tasks.filter(t => t.completed);
+
                 for (let i = 1; i <= 4; i++) {
                     const container = document.getElementById(`tasks-${i}`);
                     let quadrantTasks = this.tasks
-                        .filter(t => t.quadrant == i)
+                        .filter(t => t.quadrant == i && !t.completed)
                         .slice()
                         .sort((a, b) => {
                             const hasDueA = !!a.dueDate;
@@ -1007,6 +1117,8 @@
                         </div>
                     `}).join('');
                 }
+
+                UI.renderCompletedTasks(completedTasks);
             },
         };
 
@@ -1059,7 +1171,7 @@
 
                     const action = actionTarget.dataset.action;
                     const taskTarget = e.target.closest('.task');
-                    const taskId = taskTarget?.dataset.taskId;
+                    const taskId = actionTarget.dataset.taskId || taskTarget?.dataset.taskId;
 
                     switch (action) {
                         // --- NEW AUTH ACTIONS ---
@@ -1068,11 +1180,14 @@
                         // --- END NEW AUTH ACTIONS ---
 
                         case 'open-settings': UI.openSettingsModal(); break;
+                        case 'toggle-completed-panel': UI.toggleCompletedPanel(); break;
+                        case 'close-completed-panel': UI.closeCompletedPanel(); break;
                         case 'open-add-modal': UI.openModal('addTaskModal'); break;
                         case 'open-details': UI.openDetailsModal(taskId, e); break;
                         case 'edit-title': TaskManager.editTask(taskId, e); break;
                         case 'start-timer': Timer.startFromTask(taskId, e); break;
                         case 'toggle-complete': TaskManager.toggleComplete(taskId, e); break;
+                        case 'reopen-task': TaskManager.toggleComplete(taskId, e); break;
                         case 'open-delete-modal': UI.openDeleteModal(taskId, e); break;
                         case 'close-modal': UI.closeModal(e.target.closest('.modal').id); break;
                         case 'save-api-key': GeminiService.saveApiKey(); break;
