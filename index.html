@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale-1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Eisenhower Matrix - AI Task Manager</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -314,6 +314,13 @@
         
         // --- GEMINI API KEY (Can be set in UI) --- //
         let GEMINI_API_KEY = "";
+
+        // --- UTILITY FUNCTIONS --- //
+        const escapeHtml = (text) => {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        };
         
         // --- FIREBASE SERVICE --- //
         const FirebaseService = {
@@ -325,16 +332,12 @@
             tasksUnsubscribe: null,
 
             async init(onAuthReady, onSignedOut) {
-                // setLogLevel('debug');
-                
                 let firebaseConfig;
                 if (USER_PROVIDED_FIREBASE_CONFIG) {
                     firebaseConfig = USER_PROVIDED_FIREBASE_CONFIG;
-                    console.log("Using user-provided Firebase config.");
-                } 
+                }
                 else if (typeof __firebase_config !== 'undefined' && __firebase_config) {
                     firebaseConfig = JSON.parse(__firebase_config);
-                    console.log("Using environment-provided Firebase config.");
                 } 
                 else {
                     console.error("Firebase config is missing.");
@@ -355,7 +358,6 @@
                         if (user) {
                             // User is signed in
                             this.userId = user.uid;
-                            console.log("User signed in:", user.displayName, user.uid);
                             const authSection = document.getElementById('authSection');
                             if (authSection) {
                                 // Show user info and Sign Out button
@@ -378,7 +380,6 @@
                             this.userId = null;
                             if (this.tasksUnsubscribe) this.tasksUnsubscribe();
                             this.tasksCollectionRef = null;
-                            console.log("User is signed out.");
                             const authSection = document.getElementById('authSection');
                             if (authSection) {
                                 // Show Sign In button
@@ -738,7 +739,7 @@
                 subtasksContainer.innerHTML = (task.subtasks || []).map(st => `
                     <div class="flex items-center gap-2 p-2 bg-gray-100 rounded-md">
                         <input type="checkbox" ${st.completed ? 'checked' : ''} data-action="toggle-subtask" data-subtask-id="${st.id}" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
-                        <span class="flex-grow ${st.completed ? 'line-through text-gray-500' : 'text-gray-800'}">${st.text}</span>
+                        <span class="flex-grow ${st.completed ? 'line-through text-gray-500' : 'text-gray-800'}">${escapeHtml(st.text)}</span>
                         <button data-action="delete-subtask" data-subtask-id="${st.id}" class="text-xs text-red-500 hover:text-red-700">Delete</button>
                     </div>
                 `).join('') || '<p class="text-sm text-center text-gray-500">No sub-tasks yet.</p>';
@@ -793,8 +794,8 @@
                         container.innerHTML = '<p class="p-4 text-sm text-center text-gray-500">No completed tasks yet.</p>';
                     } else {
                         const sorted = tasks.slice().sort((a, b) => {
-                            const dateA = new Date(a.completedAt || a.updatedAt || a.createdAt || 0);
-                            const dateB = new Date(b.completedAt || b.updatedAt || b.createdAt || 0);
+                            const dateA = new Date(a.completedAt || a.createdAt || 0);
+                            const dateB = new Date(b.completedAt || b.createdAt || 0);
                             return dateB - dateA;
                         });
                         container.innerHTML = sorted.map(task => {
@@ -804,7 +805,7 @@
                                 <div class="border border-gray-200 rounded-lg shadow-sm">
                                     <div class="flex items-start justify-between gap-3 p-3">
                                         <div class="flex-1 min-w-0">
-                                            <p class="text-sm font-semibold text-gray-700 line-through">${task.title}</p>
+                                            <p class="text-sm font-semibold text-gray-700 line-through">${escapeHtml(task.title)}</p>
                                             <div class="flex flex-wrap gap-2 mt-2 text-xs text-gray-500">
                                                 ${dueDate ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-100 rounded-full">📅 ${dueDate}</span>` : ''}
                                                 ${completedDate ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 rounded-full">✅ ${completedDate}</span>` : ''}
@@ -907,7 +908,7 @@
             },
             toggleComplete(taskId, evt = null) {
                 if (evt) evt.stopPropagation();
-                const task = this.tasks.find(t => t.id == taskId);
+                const task = this.tasks.find(t => t.id === taskId);
                 if (task) {
                     const newStatus = !task.completed;
                     task.completed = newStatus;
@@ -981,9 +982,9 @@
                 this.updateTask(task);
                 UI.showNotification('Task details updated.', 'success');
             },
-            moveTask(taskId, newQuadrant) { 
-                const task = this.tasks.find(t => t.id == taskId); 
-                if (task) { task.quadrant = newQuadrant; this.updateTask(task); } 
+            moveTask(taskId, newQuadrant) {
+                const task = this.tasks.find(t => t.id === taskId);
+                if (task) { task.quadrant = newQuadrant; this.updateTask(task); }
             },
             dragStart(event, taskId) { 
                 if (!FirebaseService.userId) { event.preventDefault(); return; }
@@ -1061,7 +1062,7 @@
                 for (let i = 1; i <= 4; i++) {
                     const container = document.getElementById(`tasks-${i}`);
                     let quadrantTasks = this.tasks
-                        .filter(t => t.quadrant == i && !t.completed)
+                        .filter(t => t.quadrant === i && !t.completed)
                         .slice()
                         .sort((a, b) => {
                             const hasDueA = !!a.dueDate;
@@ -1091,8 +1092,8 @@
                         const isOverdue = task.dueDate && !task.completed && new Date(task.dueDate) < new Date();
                         
                         const titleDisplay = this.editingTaskId === task.id
-                            ? `<input type="text" class="task-title-input" data-task-id="${task.id}" value="${task.title}">`
-                            : `<p class="font-semibold text-gray-800 truncate task-title-text" data-action="edit-title">${task.title}</p>`;
+                            ? `<input type="text" class="task-title-input" data-task-id="${task.id}" value="${escapeHtml(task.title)}">`
+                            : `<p class="font-semibold text-gray-800 truncate task-title-text" data-action="edit-title">${escapeHtml(task.title)}</p>`;
                         
                         let timeDisplay = `${task.timeBox}m`;
                         if (task.remainingTime && task.remainingTime > 0 && task.remainingTime < task.timeBox * 60) {
@@ -1125,7 +1126,6 @@
         // --- APP INITIALIZER --- //
         const App = {
             init() {
-                console.log("App initializing...");
                 GeminiService.init();
                 // --- UPDATED INIT CALL ---
                 FirebaseService.init(
@@ -1137,12 +1137,10 @@
                 this.bindDelegatedListeners();
             },
             onAuthReady(userId) {
-                console.log("Auth is ready. User:", userId);
                 TaskManager.init(userId);
             },
             // --- NEW: Handle sign-out ---
             onSignedOut() {
-                console.log("Auth state signed out. Clearing tasks.");
                 TaskManager.clearTasks();
             },
             // --- END NEW ---
