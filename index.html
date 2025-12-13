@@ -333,13 +333,22 @@
             tasksUnsubscribe: null,
 
             async init(onAuthReady, onSignedOut) {
+                // Failsafe: Hide overlay after 5 seconds no matter what
+                setTimeout(() => {
+                    const overlay = document.getElementById('auth-overlay');
+                    if (overlay && !overlay.classList.contains('hidden')) {
+                        console.warn("Auth initialization timeout - hiding overlay");
+                        overlay.classList.add('hidden');
+                    }
+                }, 5000);
+
                 let firebaseConfig;
                 if (USER_PROVIDED_FIREBASE_CONFIG) {
                     firebaseConfig = USER_PROVIDED_FIREBASE_CONFIG;
                 }
                 else if (typeof __firebase_config !== 'undefined' && __firebase_config) {
                     firebaseConfig = JSON.parse(__firebase_config);
-                } 
+                }
                 else {
                     console.error("Firebase config is missing.");
                     UI.showConfigWarning("<strong>Critical Error:</strong> Firebase configuration is missing. Add your `firebaseConfig` object to the script to fix this.");
@@ -350,12 +359,15 @@
                 this.appId = typeof __app_id !== 'undefined' ? __app_id : (firebaseConfig.projectId || 'default-app-id');
 
                 try {
+                    console.log("Initializing Firebase...");
                     const app = initializeApp(firebaseConfig);
                     this.db = getFirestore(app);
                     this.auth = getAuth(app);
+                    console.log("Firebase initialized successfully");
 
                     // --- UPDATED AUTH LOGIC ---
                     onAuthStateChanged(this.auth, (user) => {
+                        console.log("Auth state changed:", user ? "signed in" : "signed out");
                         if (user) {
                             // User is signed in
                             this.userId = user.uid;
@@ -392,7 +404,11 @@
                             onSignedOut();
                         }
                         // Hide overlay after first auth check, regardless of state
-                        document.getElementById('auth-overlay')?.classList.add('hidden');
+                        console.log("Hiding auth overlay");
+                        const overlay = document.getElementById('auth-overlay');
+                        if (overlay) {
+                            overlay.classList.add('hidden');
+                        }
                     });
                     // --- END UPDATED AUTH LOGIC ---
                     
