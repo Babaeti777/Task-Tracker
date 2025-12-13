@@ -439,7 +439,14 @@
                     callback(tasks);
                 }, (error) => {
                     console.error("Error getting tasks snapshot:", error);
-                    UI.showNotification("Error syncing tasks from database.", "error");
+                    console.error("Error code:", error.code);
+                    console.error("Error message:", error.message);
+
+                    let errorMsg = "Error syncing tasks from database.";
+                    if (error.code === 'permission-denied') {
+                        errorMsg = "Permission denied. Please check Firestore security rules.";
+                    }
+                    UI.showNotification(errorMsg, "error");
                 });
             },
 
