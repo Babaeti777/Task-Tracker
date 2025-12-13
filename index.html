@@ -442,11 +442,18 @@
                     console.error("Error code:", error.code);
                     console.error("Error message:", error.message);
 
-                    let errorMsg = "Error syncing tasks from database.";
                     if (error.code === 'permission-denied') {
-                        errorMsg = "Permission denied. Please check Firestore security rules.";
+                        UI.showConfigWarning(`
+                            <strong>⚠️ Firestore Permission Denied</strong><br>
+                            Your Firestore security rules are blocking access. To fix this:<br>
+                            1. Go to <a href="https://console.firebase.google.com/project/task-1c051/firestore/rules" target="_blank" class="underline">Firebase Console → Firestore Rules</a><br>
+                            2. Update rules to allow authenticated users to access their data<br>
+                            3. See <code>FIRESTORE_SETUP.md</code> for detailed instructions
+                        `);
+                        UI.showNotification("Permission denied - Check banner above for fix", "error");
+                    } else {
+                        UI.showNotification(`Error syncing tasks: ${error.message}`, "error");
                     }
-                    UI.showNotification(errorMsg, "error");
                 });
             },
 
@@ -459,7 +466,11 @@
                     await addDoc(this.tasksCollectionRef, task);
                 } catch (error) {
                     console.error("Error adding task:", error);
-                    UI.showNotification("Failed to add task.", "error");
+                    if (error.code === 'permission-denied') {
+                        UI.showNotification("Permission denied - Check Firestore security rules", "error");
+                    } else {
+                        UI.showNotification(`Failed to add task: ${error.message}`, "error");
+                    }
                 }
             },
 
@@ -470,7 +481,11 @@
                     await setDoc(taskDocRef, taskData, { merge: true });
                 } catch (error) {
                     console.error("Error updating task:", error);
-                    UI.showNotification("Failed to update task.", "error");
+                    if (error.code === 'permission-denied') {
+                        UI.showNotification("Permission denied - Check Firestore security rules", "error");
+                    } else {
+                        UI.showNotification(`Failed to update task: ${error.message}`, "error");
+                    }
                 }
             },
 
@@ -481,7 +496,11 @@
                     await deleteDoc(taskDocRef);
                 } catch (error) {
                     console.error("Error deleting task:", error);
-                    UI.showNotification("Failed to delete task.", "error");
+                    if (error.code === 'permission-denied') {
+                        UI.showNotification("Permission denied - Check Firestore security rules", "error");
+                    } else {
+                        UI.showNotification(`Failed to delete task: ${error.message}`, "error");
+                    }
                 }
             }
         };
